@@ -28,37 +28,52 @@ export function distanceBucket(km: number): MatchPreferences['distanceBucket'] {
   return 'Ultra'
 }
 
+const DISTANCE_ORDER: MatchPreferences['distanceBucket'][] = ['Corta', 'Media', 'Larga', 'Ultra']
+const DISTANCE_STEP_FRAC = [1, 0.55, 0.2, 0] // 0, 1, 2, 3 buckets de distancia
+const LEVEL_ORDER: Exigencia[] = ['Principiante', 'Intermedio', 'Avanzado']
+const LEVEL_STEP_FRAC = [1, 0.5, 0] // 0, 1, 2 escalones de nivel
+
+function stepFrac<T>(order: T[], steps: number[], a: T, b: T) {
+  const diff = Math.abs(order.indexOf(a) - order.indexOf(b))
+  return steps[diff] ?? 0
+}
+
 export interface MatchResult {
   event: EventRow
   matchScore: number
-  distOk: boolean
+  distFrac: number
   terrainOk: boolean
-  levelOk: boolean
+  levelFrac: number
   climateFrac: number
+}
+
+/** ¿Hay al menos un evento de este deporte con el terreno pedido? Si no, mostramos un mensaje honesto en vez de un 0% que parece un bug. */
+export function terrainAvailable(events: EventRow[], sport: Discipline, terrain: Terrain) {
+  return events.some((e) => e.discipline === sport && e.terrain === terrain)
 }
 
 export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchResult[] {
   return events
     .filter((e) => e.discipline === pref.sport)
     .map((e) => {
-      const distOk = distanceBucket(e.km) === pref.distanceBucket
+      const distFrac = stepFrac(DISTANCE_ORDER, DISTANCE_STEP_FRAC, distanceBucket(e.km), pref.distanceBucket)
       const terrainOk = e.terrain === pref.terrain
-      const levelOk = e.exigencia === pref.exigencia
+      const levelFrac = stepFrac(LEVEL_ORDER, LEVEL_STEP_FRAC, e.exigencia, pref.exigencia)
       const climateDiff = Math.abs((e.temp_avg_c ?? pref.climateIdeal) - pref.climateIdeal)
       const climateFrac = Math.max(0, 1 - Math.min(1, climateDiff / 15))
 
       const raw =
-        (distOk ? MATCH_WEIGHTS.distance : 0) +
+        distFrac * MATCH_WEIGHTS.distance +
         (terrainOk ? MATCH_WEIGHTS.terrain : 0) +
         climateFrac * MATCH_WEIGHTS.climate +
-        (levelOk ? MATCH_WEIGHTS.level : 0)
+        levelFrac * MATCH_WEIGHTS.level
 
       return {
         event: e,
         matchScore: Math.max(8, Math.round(raw)),
-        distOk,
+        distFrac,
         terrainOk,
-        levelOk,
+        levelFrac,
         climateFrac,
       }
     })

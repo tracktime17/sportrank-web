@@ -6,7 +6,7 @@ import { Seg, type SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
 import { Ring } from '@/components/ui/Ring'
 import { BarsIcon, RunIcon, TriIcon, BikeIcon, BuildingIcon, MountainIcon, WaveIcon } from '@/components/ui/Icons'
-import { computeMatch, distanceBucket, MATCH_WEIGHTS, type MatchPreferences } from '@/lib/events'
+import { computeMatch, distanceBucket, terrainAvailable, MATCH_WEIGHTS, type MatchPreferences } from '@/lib/events'
 import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
 
 const SPORTS: SegOption<Discipline>[] = [
@@ -60,32 +60,48 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     )
   }
 
+  const noTerrainForSport = !terrainAvailable(events, pref.sport, pref.terrain)
+
   const breakdown = [
     {
       label: BREAKDOWN_LABELS[0],
       weight: MATCH_WEIGHTS.distance,
-      earned: top.distOk ? 1 : 0,
-      detail: `${distanceBucket(top.event.km)} (${top.event.km}K) vs. objetivo ${pref.distanceBucket}`,
+      earned: top.distFrac,
+      detail:
+        top.distFrac === 1
+          ? `Coincide: ${distanceBucket(top.event.km)} (${top.event.km}K)`
+          : `Es ${distanceBucket(top.event.km)} (${top.event.km}K), buscabas ${pref.distanceBucket}`,
     },
     {
       label: BREAKDOWN_LABELS[1],
       weight: MATCH_WEIGHTS.terrain,
       earned: top.terrainOk ? 1 : 0,
-      detail: `${top.event.terrain} vs. preferido ${pref.terrain}`,
+      detail: noTerrainForSport
+        ? `Todavía no tenemos carreras de ${pref.terrain} en ${pref.sport.toLowerCase()}`
+        : top.terrainOk
+          ? `Coincide: ${top.event.terrain}`
+          : `Es ${top.event.terrain}, buscabas ${pref.terrain}`,
     },
     {
       label: BREAKDOWN_LABELS[2],
       weight: MATCH_WEIGHTS.climate,
       earned: top.climateFrac,
-      detail: `${top.event.temp_avg_c}°C en el evento vs. ${pref.climateIdeal}°C ideal`,
+      detail: `${top.event.temp_avg_c}°C en el evento, ideal ${pref.climateIdeal}°C`,
     },
     {
       label: BREAKDOWN_LABELS[3],
       weight: MATCH_WEIGHTS.level,
-      earned: top.levelOk ? 1 : 0,
-      detail: `Nivel ${top.event.exigencia} vs. buscado ${pref.exigencia}`,
+      earned: top.levelFrac,
+      detail:
+        top.levelFrac === 1
+          ? `Coincide: nivel ${top.event.exigencia}`
+          : `Es ${top.event.exigencia}, buscabas ${pref.exigencia}`,
     },
   ]
+
+  const tier = (frac: number) => (frac >= 0.75 ? 'good' : frac >= 0.4 ? 'warn' : 'bad')
+  const scoreTier = tier(top.matchScore / 100)
+  const scoreTierLabel = { good: 'Match fuerte', warn: 'Match parcial', bad: 'Match débil' }[scoreTier]
 
   return (
     <div className="console-shell">
@@ -121,10 +137,13 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
         </div>
 
-        <div className="match-result">
-          <Ring score={top.matchScore} size={64} stroke={6} />
+        <div className={`match-result tone-${scoreTier}`}>
+          <Ring score={top.matchScore} size={64} stroke={6} className={`ring-tone-${scoreTier}`} />
           <div className="match-info">
-            <div className="match-status">Tu mejor match en {pref.sport.toLowerCase()}</div>
+            <div className="match-status">
+              Tu mejor match en {pref.sport.toLowerCase()}
+              <span className={`match-tag tag-${scoreTier}`}>{scoreTierLabel}</span>
+            </div>
             <div className="match-name">{top.event.name}</div>
             <div className="match-meta">
               {top.event.city} · {new Date(top.event.event_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })} · {ranked.length} eventos evaluados
@@ -138,18 +157,24 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
 
       <div className="breakdown">
         <div className="breakdown-title">Por qué te sirve — {pref.sport}</div>
-        {breakdown.map((b) => (
-          <div className="brow" key={b.label}>
-            <div className="brow-top">
-              <span className="k">{b.label}</span>
-              <span className="w">{b.weight}%</span>
+        {breakdown.map((b) => {
+          const t = tier(b.earned)
+          return (
+            <div className={`brow tone-${t}`} key={b.label}>
+              <div className="brow-top">
+                <span className="k">
+                  <span className={`brow-dot dot-${t}`} aria-hidden="true" />
+                  {b.label}
+                </span>
+                <span className="w">{b.weight}%</span>
+              </div>
+              <div className="brow-track">
+                <div className={`brow-fill fill-${t}`} style={{ width: `${Math.max(6, Math.round(b.earned * 100))}%` }} />
+              </div>
+              <div className="brow-detail">{b.detail}</div>
             </div>
-            <div className="brow-track">
-              <div className="brow-fill" style={{ width: `${Math.round(b.earned * 100)}%` }} />
-            </div>
-            <div className="brow-detail">{b.detail}</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
