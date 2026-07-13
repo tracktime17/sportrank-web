@@ -23,20 +23,48 @@ function HeroTile({ event, size }: { event: EventRow; size: 'main' | 'sm' }) {
   )
 }
 
-export function Hero({ featured }: { featured: EventRow[] }) {
+export interface HeroStats {
+  totalEvents: number
+  disciplineCount: number
+  bestScore: number
+  bestName: string
+  avgCompat: number
+}
+
+export function Hero({ featured, stats }: { featured: EventRow[]; stats: HeroStats }) {
   if (featured.length === 0) return null
   const [main, ...rest] = featured
 
   return (
-    <div className="hero-grid">
-      <HeroTile event={main} size="main" />
-      {rest.length > 0 && (
-        <div className="hero-tile-stack">
-          {rest.map((event) => (
-            <HeroTile key={event.id} event={event} size="sm" />
-          ))}
+    <div className="hero-panel">
+      <div className="hero-photos">
+        <HeroTile event={main} size="main" />
+        {rest.length > 0 && (
+          <div className="hero-tile-stack">
+            {rest.map((event) => (
+              <HeroTile key={event.id} event={event} size="sm" />
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="hero-stats">
+        <div className="hero-stat">
+          <div className="v">{stats.totalEvents}</div>
+          <div className="l">Competencias activas</div>
         </div>
-      )}
+        <div className="hero-stat">
+          <div className="v">{stats.disciplineCount}</div>
+          <div className="l">Disciplinas</div>
+        </div>
+        <div className="hero-stat">
+          <div className="v accent">{stats.bestScore}</div>
+          <div className="l">Score más alto — {stats.bestName}</div>
+        </div>
+        <div className="hero-stat">
+          <div className="v">{stats.avgCompat}%</div>
+          <div className="l">Compatibilidad promedio</div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -45,28 +45,16 @@ export default async function Home() {
         </p>
       </div>
 
-      <div className="stat-row">
-        <div className="cell metric">
-          <div className="mval">{events.length}</div>
-          <div className="mlbl">Competencias activas</div>
-        </div>
-        <div className="cell metric">
-          <div className="mval">3</div>
-          <div className="mlbl">Disciplinas</div>
-        </div>
-        {best && (
-          <div className="cell metric">
-            <div className="mval accent">{best.score}</div>
-            <div className="mlbl">Score más alto — {best.name.split(' ').slice(0, 2).join(' ')}</div>
-          </div>
-        )}
-        <div className="cell metric">
-          <div className="mval">{avgCompat}%</div>
-          <div className="mlbl">Compatibilidad promedio</div>
-        </div>
-      </div>
-
-      <Hero featured={heroFeatured} />
+      <Hero
+        featured={heroFeatured}
+        stats={{
+          totalEvents: events.length,
+          disciplineCount: 3,
+          bestScore: best?.score ?? 0,
+          bestName: best?.name ?? '—',
+          avgCompat,
+        }}
+      />
 
       <section className="section" id="match-section">
         <MatchConsole events={events} />
