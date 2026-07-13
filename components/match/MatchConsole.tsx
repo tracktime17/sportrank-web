@@ -10,12 +10,14 @@ import { Radar } from '@/components/match/Radar'
 import { BarsIcon, RunIcon, TriIcon, BikeIcon, BuildingIcon, MountainIcon, WaveIcon } from '@/components/ui/Icons'
 import {
   computeMatch,
-  distanceBucket,
+  distanceLabel,
   elevationBucket,
   costBucket,
   costRange,
   costLabel,
   terrainAvailable,
+  DISTANCE_OPTIONS,
+  defaultDistanceFor,
   MATCH_WEIGHTS,
   type MatchPreferences,
 } from '@/lib/events'
@@ -25,13 +27,6 @@ const SPORTS: SegOption<Discipline>[] = [
   { key: 'Running', label: 'Running', icon: <RunIcon /> },
   { key: 'Triatlón', label: 'Triatlón', icon: <TriIcon /> },
   { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon /> },
-]
-
-const DISTANCES: SegOption<MatchPreferences['distanceBucket']>[] = [
-  { key: 'Corta', label: 'Corta', hint: '<15K' },
-  { key: 'Media', label: 'Media', hint: '15–30K' },
-  { key: 'Larga', label: 'Larga', hint: '30–60K' },
-  { key: 'Ultra', label: 'Ultra', hint: '60K+' },
 ]
 
 const TERRAINS: SegOption<Terrain>[] = [
@@ -47,22 +42,22 @@ const LEVELS: SegOption<Exigencia>[] = [
 ]
 
 const ELEVATIONS: SegOption<MatchPreferences['elevationBucket']>[] = [
-  { key: 'Llano', label: 'Llano', hint: '<200m' },
-  { key: 'Ondulado', label: 'Ondulado', hint: '200–600m' },
-  { key: 'Montañoso', label: 'Montañoso', hint: '600m+' },
+  { key: 'Llano', label: 'Llano' },
+  { key: 'Ondulado', label: 'Ondulado' },
+  { key: 'Montañoso', label: 'Montañoso' },
 ]
 
 const BUDGETS: SegOption<MatchPreferences['costBucket']>[] = [
-  { key: 'Bajo', label: 'Bajo', hint: '<$120k' },
-  { key: 'Medio', label: 'Medio', hint: '$120–280k' },
-  { key: 'Alto', label: 'Alto', hint: '$280k+' },
+  { key: 'Bajo', label: 'Bajo' },
+  { key: 'Medio', label: 'Medio' },
+  { key: 'Alto', label: 'Alto' },
 ]
 
 export function MatchConsole({ events }: { events: EventRow[] }) {
   const router = useRouter()
   const [pref, setPref] = useState<MatchPreferences>({
     sport: 'Running',
-    distanceBucket: 'Media',
+    distance: defaultDistanceFor('Running'),
     terrain: 'Urbano',
     exigencia: 'Intermedio',
     climateIdeal: 16,
@@ -87,6 +82,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const noTerrainForSport = !terrainAvailable(events, pref.sport, pref.terrain)
   const eventElevation = top.event.elevation_gain_m ?? 0
   const eventCost = costRange(top.event).max
+  const eventDistances = distanceLabel(pref.sport, top.event)
 
   // Orden del radar (arriba, en sentido horario): Distancia, Terreno, Costo, Exigencia, Desnivel, Clima.
   const breakdown = [
@@ -96,8 +92,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       earned: top.distFrac,
       detail:
         top.distFrac === 1
-          ? `Coincide: ${distanceBucket(top.event.km)} (${top.event.km}K)`
-          : `Es ${distanceBucket(top.event.km)} (${top.event.km}K), buscabas ${pref.distanceBucket}`,
+          ? `Coincide: ofrece ${eventDistances}`
+          : `Ofrece ${eventDistances}, buscabas ${pref.distance}`,
     },
     {
       label: 'Terreno',
@@ -115,8 +111,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       earned: top.costFrac,
       detail:
         top.costFrac === 1
-          ? `Coincide: ${costBucket(eventCost)} (${costLabel(top.event)} estimado)`
-          : `Es ${costBucket(eventCost)} (${costLabel(top.event)} estimado), buscabas ${pref.costBucket}`,
+          ? `Coincide: ${costBucket(pref.sport, eventCost)} (${costLabel(top.event)} estimado)`
+          : `Es ${costBucket(pref.sport, eventCost)} (${costLabel(top.event)} estimado), buscabas ${pref.costBucket}`,
     },
     {
       label: 'Exigencia',
@@ -133,8 +129,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       earned: top.elevationFrac,
       detail:
         top.elevationFrac === 1
-          ? `Coincide: ${elevationBucket(eventElevation)} (+${eventElevation}m)`
-          : `Es ${elevationBucket(eventElevation)} (+${eventElevation}m), buscabas ${pref.elevationBucket}`,
+          ? `Coincide: ${elevationBucket(pref.sport, eventElevation)} (+${eventElevation}m)`
+          : `Es ${elevationBucket(pref.sport, eventElevation)} (+${eventElevation}m), buscabas ${pref.elevationBucket}`,
     },
     {
       label: 'Clima',
@@ -179,14 +175,20 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
 
         <div className="rail-block">
           <span className="clabel">Deporte</span>
-          <TileSelect options={SPORTS} value={pref.sport} onChange={(sport) => setPref((p) => ({ ...p, sport }))} />
+          <TileSelect
+            options={SPORTS}
+            value={pref.sport}
+            onChange={(sport) => setPref((p) => ({ ...p, sport, distance: defaultDistanceFor(sport) }))}
+          />
         </div>
         <div className="rail-block">
-          <span className="clabel">Distancia</span>
+          <span className="clabel">
+            Distancia {pref.sport === 'Triatlón' ? '(formato)' : null}
+          </span>
           <TileSelect
-            options={DISTANCES}
-            value={pref.distanceBucket}
-            onChange={(distanceBucket) => setPref((p) => ({ ...p, distanceBucket }))}
+            options={DISTANCE_OPTIONS[pref.sport]}
+            value={pref.distance}
+            onChange={(distance) => setPref((p) => ({ ...p, distance }))}
           />
         </div>
         <div className="rail-pair">
