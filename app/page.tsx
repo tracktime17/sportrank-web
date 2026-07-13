@@ -38,10 +38,10 @@ export default async function Home() {
     <div className="wrap view-enter">
       <div className="page-head">
         <div className="eyebrow">Motor de compatibilidad deportiva</div>
-        <h1>Descubre dónde tendrás tu mejor rendimiento.</h1>
+        <h1>Encuentra el evento perfecto para ti.</h1>
         <p>
-          Running, triatlón y ciclismo, evaluados uno por uno contra tu distancia, tu terreno, tu clima y tu nivel —
-          nunca comparados entre sí.
+          Analizamos tu rendimiento, el recorrido, el clima, el desnivel, el costo y cientos de variables para
+          decirte en qué carreras tendrás mayores posibilidades de disfrutar, mejorar o competir.
         </p>
       </div>
 
