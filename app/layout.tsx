@@ -12,7 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'SportRank — Descubre dónde tendrás tu mejor rendimiento',
+  title: 'NextRace — Encuentra el evento perfecto para ti',
   description:
     'Motor de compatibilidad deportiva para running, triatlón y ciclismo en Chile. Primero el deporte, luego distancia, terreno, clima y exigencia — nunca comparados entre sí.',
 }
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TopNav />
         {children}
         <footer className="wrap">
-          <div>SportRank — Running · Triatlón · Ciclismo</div>
+          <div>NextRace — Running · Triatlón · Ciclismo</div>
           <div>Datos reales, Chile · Beta</div>
         </footer>
         <BottomNav />

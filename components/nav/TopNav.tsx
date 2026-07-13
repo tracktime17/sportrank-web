@@ -22,7 +22,7 @@ export function TopNav() {
       <div className="wrap">
         <Link href="/" className="logo">
           <span className="dot" />
-          SportRank
+          NextRace
         </Link>
         <div className="navlinks">
           {LINKS.map((link) => {
