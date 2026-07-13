@@ -603,6 +603,12 @@ input {
 .rail-block:last-child {
   margin-bottom: 0;
 }
+.rail-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
 .clabel {
   font-size: 11px;
   font-weight: 700;
@@ -615,8 +621,8 @@ input {
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  gap: 6px;
 }
 .tile {
   background: var(--surface-2);
@@ -1684,6 +1690,10 @@ footer {
   }
   .console-shell {
     padding: 22px;
+  }
+  .rail-pair {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
   .perf-metrics {
     grid-template-columns: repeat(2, 1fr);

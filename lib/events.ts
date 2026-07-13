@@ -6,12 +6,17 @@ import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/ty
 // reales a la base de datos viven en lib/events-server.ts.
 
 /* =========================================================
-   MOTOR DE MATCH — mismo criterio que el prototipo:
-   primero el deporte (no se mezcla running con triatlón),
-   luego distancia / terreno / clima / exigencia dentro de
-   esa disciplina. Pesos: 30 / 25 / 20 / 25.
+   MOTOR DE MATCH — primero el deporte (no se mezcla running
+   con triatlón), luego distancia / terreno / clima / exigencia
+   / desnivel / costo dentro de esa disciplina. Estos 6 ejes son
+   los mismos que promete la portada (rendimiento, recorrido,
+   clima, desnivel, costo) — si se agrega un criterio nuevo acá,
+   agrégalo también al radar de MatchConsole.
 ========================================================= */
-export const MATCH_WEIGHTS = { distance: 30, terrain: 25, climate: 20, level: 25 } as const
+export const MATCH_WEIGHTS = { distance: 20, terrain: 15, climate: 15, level: 15, elevation: 15, cost: 20 } as const
+
+export type ElevationBucket = 'Llano' | 'Ondulado' | 'Montañoso'
+export type CostBucket = 'Bajo' | 'Medio' | 'Alto'
 
 export interface MatchPreferences {
   sport: Discipline
@@ -19,6 +24,8 @@ export interface MatchPreferences {
   terrain: Terrain
   exigencia: Exigencia
   climateIdeal: number
+  elevationBucket: ElevationBucket
+  costBucket: CostBucket
 }
 
 export function distanceBucket(km: number): MatchPreferences['distanceBucket'] {
@@ -28,10 +35,26 @@ export function distanceBucket(km: number): MatchPreferences['distanceBucket'] {
   return 'Ultra'
 }
 
+export function elevationBucket(m: number): ElevationBucket {
+  if (m < 200) return 'Llano'
+  if (m < 600) return 'Ondulado'
+  return 'Montañoso'
+}
+
+export function costBucket(total: number): CostBucket {
+  if (total < 120_000) return 'Bajo'
+  if (total < 280_000) return 'Medio'
+  return 'Alto'
+}
+
 const DISTANCE_ORDER: MatchPreferences['distanceBucket'][] = ['Corta', 'Media', 'Larga', 'Ultra']
 const DISTANCE_STEP_FRAC = [1, 0.55, 0.2, 0] // 0, 1, 2, 3 buckets de distancia
 const LEVEL_ORDER: Exigencia[] = ['Principiante', 'Intermedio', 'Avanzado']
 const LEVEL_STEP_FRAC = [1, 0.5, 0] // 0, 1, 2 escalones de nivel
+const ELEVATION_ORDER: ElevationBucket[] = ['Llano', 'Ondulado', 'Montañoso']
+const ELEVATION_STEP_FRAC = [1, 0.4, 0] // 0, 1, 2 escalones de desnivel
+const COST_ORDER: CostBucket[] = ['Bajo', 'Medio', 'Alto']
+const COST_STEP_FRAC = [1, 0.4, 0] // 0, 1, 2 escalones de presupuesto
 
 function stepFrac<T>(order: T[], steps: number[], a: T, b: T) {
   const diff = Math.abs(order.indexOf(a) - order.indexOf(b))
@@ -45,6 +68,8 @@ export interface MatchResult {
   terrainOk: boolean
   levelFrac: number
   climateFrac: number
+  elevationFrac: number
+  costFrac: number
 }
 
 /** ¿Hay al menos un evento de este deporte con el terreno pedido? Si no, mostramos un mensaje honesto en vez de un 0% que parece un bug. */
@@ -61,12 +86,21 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
       const levelFrac = stepFrac(LEVEL_ORDER, LEVEL_STEP_FRAC, e.exigencia, pref.exigencia)
       const climateDiff = Math.abs((e.temp_avg_c ?? pref.climateIdeal) - pref.climateIdeal)
       const climateFrac = Math.max(0, 1 - Math.min(1, climateDiff / 15))
+      const elevationFrac = stepFrac(
+        ELEVATION_ORDER,
+        ELEVATION_STEP_FRAC,
+        elevationBucket(e.elevation_gain_m ?? 0),
+        pref.elevationBucket
+      )
+      const costFrac = stepFrac(COST_ORDER, COST_STEP_FRAC, costBucket(costRange(e).max), pref.costBucket)
 
       const raw =
         distFrac * MATCH_WEIGHTS.distance +
         (terrainOk ? MATCH_WEIGHTS.terrain : 0) +
         climateFrac * MATCH_WEIGHTS.climate +
-        levelFrac * MATCH_WEIGHTS.level
+        levelFrac * MATCH_WEIGHTS.level +
+        elevationFrac * MATCH_WEIGHTS.elevation +
+        costFrac * MATCH_WEIGHTS.cost
 
       return {
         event: e,
@@ -75,6 +109,8 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
         terrainOk,
         levelFrac,
         climateFrac,
+        elevationFrac,
+        costFrac,
       }
     })
     .sort((a, b) => b.matchScore - a.matchScore)

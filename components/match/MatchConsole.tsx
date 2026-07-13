@@ -8,7 +8,17 @@ import { ClimateSlider } from '@/components/ui/ClimateSlider'
 import { Ring } from '@/components/ui/Ring'
 import { Radar } from '@/components/match/Radar'
 import { BarsIcon, RunIcon, TriIcon, BikeIcon, BuildingIcon, MountainIcon, WaveIcon } from '@/components/ui/Icons'
-import { computeMatch, distanceBucket, terrainAvailable, MATCH_WEIGHTS, type MatchPreferences } from '@/lib/events'
+import {
+  computeMatch,
+  distanceBucket,
+  elevationBucket,
+  costBucket,
+  costRange,
+  costLabel,
+  terrainAvailable,
+  MATCH_WEIGHTS,
+  type MatchPreferences,
+} from '@/lib/events'
 import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
 
 const SPORTS: SegOption<Discipline>[] = [
@@ -36,7 +46,17 @@ const LEVELS: SegOption<Exigencia>[] = [
   { key: 'Avanzado', label: 'Avanzado', icon: <BarsIcon active={3} /> },
 ]
 
-const BREAKDOWN_LABELS = ['Distancia', 'Terreno', 'Clima', 'Exigencia'] as const
+const ELEVATIONS: SegOption<MatchPreferences['elevationBucket']>[] = [
+  { key: 'Llano', label: 'Llano', hint: '<200m' },
+  { key: 'Ondulado', label: 'Ondulado', hint: '200–600m' },
+  { key: 'Montañoso', label: 'Montañoso', hint: '600m+' },
+]
+
+const BUDGETS: SegOption<MatchPreferences['costBucket']>[] = [
+  { key: 'Bajo', label: 'Bajo', hint: '<$120k' },
+  { key: 'Medio', label: 'Medio', hint: '$120–280k' },
+  { key: 'Alto', label: 'Alto', hint: '$280k+' },
+]
 
 export function MatchConsole({ events }: { events: EventRow[] }) {
   const router = useRouter()
@@ -46,6 +66,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     terrain: 'Urbano',
     exigencia: 'Intermedio',
     climateIdeal: 16,
+    elevationBucket: 'Ondulado',
+    costBucket: 'Medio',
   })
 
   const ranked = useMemo(() => computeMatch(events, pref), [events, pref])
@@ -63,10 +85,13 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   }
 
   const noTerrainForSport = !terrainAvailable(events, pref.sport, pref.terrain)
+  const eventElevation = top.event.elevation_gain_m ?? 0
+  const eventCost = costRange(top.event).max
 
+  // Orden del radar (arriba, en sentido horario): Distancia, Terreno, Costo, Exigencia, Desnivel, Clima.
   const breakdown = [
     {
-      label: BREAKDOWN_LABELS[0],
+      label: 'Distancia',
       weight: MATCH_WEIGHTS.distance,
       earned: top.distFrac,
       detail:
@@ -75,7 +100,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           : `Es ${distanceBucket(top.event.km)} (${top.event.km}K), buscabas ${pref.distanceBucket}`,
     },
     {
-      label: BREAKDOWN_LABELS[1],
+      label: 'Terreno',
       weight: MATCH_WEIGHTS.terrain,
       earned: top.terrainOk ? 1 : 0,
       detail: noTerrainForSport
@@ -85,13 +110,16 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           : `Es ${top.event.terrain}, buscabas ${pref.terrain}`,
     },
     {
-      label: BREAKDOWN_LABELS[2],
-      weight: MATCH_WEIGHTS.climate,
-      earned: top.climateFrac,
-      detail: `${top.event.temp_avg_c}°C en el evento, ideal ${pref.climateIdeal}°C`,
+      label: 'Costo',
+      weight: MATCH_WEIGHTS.cost,
+      earned: top.costFrac,
+      detail:
+        top.costFrac === 1
+          ? `Coincide: ${costBucket(eventCost)} (${costLabel(top.event)} estimado)`
+          : `Es ${costBucket(eventCost)} (${costLabel(top.event)} estimado), buscabas ${pref.costBucket}`,
     },
     {
-      label: BREAKDOWN_LABELS[3],
+      label: 'Exigencia',
       weight: MATCH_WEIGHTS.level,
       earned: top.levelFrac,
       detail:
@@ -99,23 +127,34 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           ? `Coincide: nivel ${top.event.exigencia}`
           : `Es ${top.event.exigencia}, buscabas ${pref.exigencia}`,
     },
+    {
+      label: 'Desnivel',
+      weight: MATCH_WEIGHTS.elevation,
+      earned: top.elevationFrac,
+      detail:
+        top.elevationFrac === 1
+          ? `Coincide: ${elevationBucket(eventElevation)} (+${eventElevation}m)`
+          : `Es ${elevationBucket(eventElevation)} (+${eventElevation}m), buscabas ${pref.elevationBucket}`,
+    },
+    {
+      label: 'Clima',
+      weight: MATCH_WEIGHTS.climate,
+      earned: top.climateFrac,
+      detail: `${top.event.temp_avg_c}°C en el evento, ideal ${pref.climateIdeal}°C`,
+    },
   ]
 
   const tier = (frac: number) => (frac >= 0.75 ? 'good' : frac >= 0.4 ? 'warn' : 'bad')
   const scoreTier = tier(top.matchScore / 100)
   const scoreTierLabel = { good: 'Match fuerte', warn: 'Match parcial', bad: 'Match débil' }[scoreTier]
 
-  // Orden en el radar: Distancia arriba, Terreno derecha, Exigencia abajo, Clima izquierda.
-  const radarAxes = [breakdown[0], breakdown[1], breakdown[3], breakdown[2]].map((b) => ({
-    label: b.label,
-    value: b.earned,
-  }))
+  const radarAxes = breakdown.map((b) => ({ label: b.label, value: b.earned }))
 
   const strongCount = breakdown.filter((b) => b.earned >= 0.75).length
   const weakest = [...breakdown].sort((a, b) => a.earned - b.earned)[0]
   const summary =
     strongCount === breakdown.length
-      ? 'Los 4 ejes calzan casi perfecto con tu perfil.'
+      ? `Los ${breakdown.length} ejes calzan casi perfecto con tu perfil.`
       : `${strongCount} de ${breakdown.length} ejes calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
 
   return (
@@ -125,8 +164,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           <div>
             <h3>Encuentra tu match</h3>
             <p className="sub">
-              Define tu perfil de carrera y te mostramos un informe de compatibilidad contra las carreras
-              publicadas — no solo un puntaje, sino en qué se ajusta y en qué no.
+              Define tu perfil —rendimiento, recorrido, clima, desnivel y costo— y te mostramos un informe de
+              compatibilidad contra las carreras publicadas: no solo un puntaje, sino en qué se ajusta y en qué no.
             </p>
           </div>
           <div className="console-badge">
@@ -150,13 +189,29 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
             onChange={(distanceBucket) => setPref((p) => ({ ...p, distanceBucket }))}
           />
         </div>
-        <div className="rail-block">
-          <span className="clabel">Terreno</span>
-          <TileSelect options={TERRAINS} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+        <div className="rail-pair">
+          <div>
+            <span className="clabel">Terreno</span>
+            <TileSelect options={TERRAINS} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+          </div>
+          <div>
+            <span className="clabel">Exigencia</span>
+            <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
+          </div>
         </div>
-        <div className="rail-block">
-          <span className="clabel">Exigencia</span>
-          <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
+        <div className="rail-pair">
+          <div>
+            <span className="clabel">Desnivel</span>
+            <TileSelect
+              options={ELEVATIONS}
+              value={pref.elevationBucket}
+              onChange={(elevationBucket) => setPref((p) => ({ ...p, elevationBucket }))}
+            />
+          </div>
+          <div>
+            <span className="clabel">Costo</span>
+            <TileSelect options={BUDGETS} value={pref.costBucket} onChange={(costBucket) => setPref((p) => ({ ...p, costBucket }))} />
+          </div>
         </div>
         <div className="rail-block" style={{ marginBottom: 0 }}>
           <span className="clabel">Clima ideal</span>
