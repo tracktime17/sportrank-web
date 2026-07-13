@@ -35,7 +35,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     <div className="view-enter">
       <div className="detail-hero photo-panel">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`https://picsum.photos/seed/${event.slug}/1600/900`} alt={event.name} />
+        <img src={event.image_url ?? `https://picsum.photos/seed/${event.slug}/1600/900`} alt={event.name} />
         <DetailActions eventId={event.id} />
         <div className="detail-hero-content wrap">
           <div className="eyebrow">{event.discipline}</div>

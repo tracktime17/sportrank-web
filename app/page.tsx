@@ -1,5 +1,5 @@
 import { getEvents } from '@/lib/events-server'
-import { costLabel } from '@/lib/events'
+import { Hero } from '@/components/home/Hero'
 import { MatchConsole } from '@/components/match/MatchConsole'
 import { SportGrid } from '@/components/home/SportGrid'
 import { Rail } from '@/components/home/Rail'
@@ -7,6 +7,12 @@ import type { Discipline, EventRow } from '@/lib/supabase/types'
 
 function byDiscipline(events: EventRow[], discipline: Discipline) {
   return events.filter((e) => e.discipline === discipline).sort((a, b) => (b.pr_probability ?? 0) - (a.pr_probability ?? 0))
+}
+
+function topByScore(events: EventRow[], discipline: Discipline) {
+  return [...events]
+    .filter((e) => e.discipline === discipline)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
 }
 
 export default async function Home() {
@@ -19,6 +25,14 @@ export default async function Home() {
   const running = byDiscipline(events, 'Running')
   const triatlon = byDiscipline(events, 'Triatlón')
   const ciclismo = byDiscipline(events, 'Ciclismo')
+
+  const topPerDiscipline = (['Running', 'Triatlón', 'Ciclismo'] as const)
+    .map((d) => topByScore(events, d))
+    .filter((e): e is EventRow => Boolean(e))
+  const heroMain = best ?? topPerDiscipline[0]
+  const heroFeatured = heroMain
+    ? [heroMain, ...topPerDiscipline.filter((e) => e.id !== heroMain.id)]
+    : []
 
   return (
     <div className="wrap view-enter">
@@ -52,18 +66,7 @@ export default async function Home() {
         </div>
       </div>
 
-      {best && (
-        <div className="photo-panel hero-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://picsum.photos/seed/sportrank-hero/1600/700" alt="" />
-          <div className="hero-photo-inner">
-            <div>
-              <h2>Cada competencia, medida con los mismos criterios.</h2>
-              <p>Distancia · terreno · clima · exigencia · costo total ({costLabel(best)} la más cara)</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <Hero featured={heroFeatured} />
 
       <section className="section" id="match-section">
         <MatchConsole events={events} />
