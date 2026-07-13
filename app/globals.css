@@ -161,13 +161,10 @@ input {
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
-.logo .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
+.logo-mark {
+  flex-shrink: 0;
 }
 .navlinks {
   display: flex;
