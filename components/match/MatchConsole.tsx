@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Seg, type SegOption } from '@/components/ui/Seg'
+import { TileSelect } from '@/components/ui/TileSelect'
+import type { SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
 import { Ring } from '@/components/ui/Ring'
+import { Radar } from '@/components/match/Radar'
 import { BarsIcon, RunIcon, TriIcon, BikeIcon, BuildingIcon, MountainIcon, WaveIcon } from '@/components/ui/Icons'
 import { computeMatch, distanceBucket, terrainAvailable, MATCH_WEIGHTS, type MatchPreferences } from '@/lib/events'
 import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
@@ -29,9 +31,9 @@ const TERRAINS: SegOption<Terrain>[] = [
 ]
 
 const LEVELS: SegOption<Exigencia>[] = [
-  { key: 'Principiante', label: 'Principiante', bars: 1, icon: <BarsIcon active={1} /> },
-  { key: 'Intermedio', label: 'Intermedio', bars: 2, icon: <BarsIcon active={2} /> },
-  { key: 'Avanzado', label: 'Avanzado', bars: 3, icon: <BarsIcon active={3} /> },
+  { key: 'Principiante', label: 'Principiante', icon: <BarsIcon active={1} /> },
+  { key: 'Intermedio', label: 'Intermedio', icon: <BarsIcon active={2} /> },
+  { key: 'Avanzado', label: 'Avanzado', icon: <BarsIcon active={3} /> },
 ]
 
 const BREAKDOWN_LABELS = ['Distancia', 'Terreno', 'Clima', 'Exigencia'] as const
@@ -103,78 +105,99 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const scoreTier = tier(top.matchScore / 100)
   const scoreTierLabel = { good: 'Match fuerte', warn: 'Match parcial', bad: 'Match débil' }[scoreTier]
 
+  // Orden en el radar: Distancia arriba, Terreno derecha, Exigencia abajo, Clima izquierda.
+  const radarAxes = [breakdown[0], breakdown[1], breakdown[3], breakdown[2]].map((b) => ({
+    label: b.label,
+    value: b.earned,
+  }))
+
+  const strongCount = breakdown.filter((b) => b.earned >= 0.75).length
+  const weakest = [...breakdown].sort((a, b) => a.earned - b.earned)[0]
+  const summary =
+    strongCount === breakdown.length
+      ? 'Los 4 ejes calzan casi perfecto con tu perfil.'
+      : `${strongCount} de ${breakdown.length} ejes calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
+
   return (
     <div className="console-shell">
       <div>
-        <h3>Encuentra tu match</h3>
-        <p className="sub">
-          Primero el deporte —running, triatlón y ciclismo no se comparan entre sí— y luego distancia, terreno,
-          clima y exigencia dentro de esa disciplina.
-        </p>
-
-        <div className="crow">
-          <span className="clabel">1 · Tu deporte</span>
-          <Seg options={SPORTS} value={pref.sport} onChange={(sport) => setPref((p) => ({ ...p, sport }))} />
+        <div className="console-head">
+          <div>
+            <h3>Encuentra tu match</h3>
+            <p className="sub">
+              Define tu perfil de carrera y te mostramos un informe de compatibilidad contra las carreras
+              publicadas — no solo un puntaje, sino en qué se ajusta y en qué no.
+            </p>
+          </div>
+          <div className="console-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" />
+            </svg>
+            {events.length} carreras evaluadas
+          </div>
         </div>
-        <div className="crow">
-          <span className="clabel">2 · Distancia objetivo</span>
-          <Seg
+
+        <div className="rail-block">
+          <span className="clabel">Deporte</span>
+          <TileSelect options={SPORTS} value={pref.sport} onChange={(sport) => setPref((p) => ({ ...p, sport }))} />
+        </div>
+        <div className="rail-block">
+          <span className="clabel">Distancia</span>
+          <TileSelect
             options={DISTANCES}
             value={pref.distanceBucket}
             onChange={(distanceBucket) => setPref((p) => ({ ...p, distanceBucket }))}
           />
         </div>
-        <div className="crow">
-          <span className="clabel">3 · Terreno</span>
-          <Seg options={TERRAINS} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+        <div className="rail-block">
+          <span className="clabel">Terreno</span>
+          <TileSelect options={TERRAINS} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
         </div>
-        <div className="crow">
-          <span className="clabel">4 · Nivel de exigencia</span>
-          <Seg options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
+        <div className="rail-block">
+          <span className="clabel">Exigencia</span>
+          <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
         </div>
-        <div className="crow">
-          <span className="clabel">5 · Clima ideal</span>
+        <div className="rail-block" style={{ marginBottom: 0 }}>
+          <span className="clabel">Clima ideal</span>
           <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
         </div>
+      </div>
 
-        <div className={`match-result tone-${scoreTier}`}>
-          <Ring score={top.matchScore} size={64} stroke={6} className={`ring-tone-${scoreTier}`} />
-          <div className="match-info">
-            <div className="match-status">
-              Tu mejor match en {pref.sport.toLowerCase()}
-              <span className={`match-tag tag-${scoreTier}`}>{scoreTierLabel}</span>
+      <div className="report-card">
+        <div className="report-eyebrow">Informe de compatibilidad</div>
+        <div className="report-title">Tu perfil vs. {top.event.name}</div>
+
+        <div className="radar-wrap">
+          <Radar axes={radarAxes} tone={scoreTier} />
+          <div className="radar-legend">
+            <div className="li">
+              <span className="sw ideal" />
+              Tu perfil ideal <strong>(100%)</strong>
             </div>
-            <div className="match-name">{top.event.name}</div>
-            <div className="match-meta">
-              {top.event.city} · {new Date(top.event.event_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })} · {ranked.length} eventos evaluados
+            <div className="li">
+              <span className={`sw actual tone-${scoreTier}`} />
+              {top.event.name}
+            </div>
+            <div className="li summary">{summary}</div>
+          </div>
+        </div>
+
+        <div className="report-footer">
+          <Ring score={top.matchScore} size={56} stroke={5} className={`ring-tone-${scoreTier}`} />
+          <div className="report-footer-info">
+            <div className="name">
+              {top.event.name} <span className={`tag tag-${scoreTier}`}>{scoreTierLabel}</span>
+            </div>
+            <div className="meta">
+              {top.event.city} · {new Date(top.event.event_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })} ·{' '}
+              {ranked.length} eventos evaluados
             </div>
           </div>
           <button type="button" className="btn btn-primary btn-sm" onClick={() => router.push(`/eventos/${top.event.slug}`)}>
             Ver carrera
           </button>
         </div>
-      </div>
-
-      <div className="breakdown">
-        <div className="breakdown-title">Por qué te sirve — {pref.sport}</div>
-        {breakdown.map((b) => {
-          const t = tier(b.earned)
-          return (
-            <div className={`brow tone-${t}`} key={b.label}>
-              <div className="brow-top">
-                <span className="k">
-                  <span className={`brow-dot dot-${t}`} aria-hidden="true" />
-                  {b.label}
-                </span>
-                <span className="w">{b.weight}%</span>
-              </div>
-              <div className="brow-track">
-                <div className={`brow-fill fill-${t}`} style={{ width: `${Math.max(6, Math.round(b.earned * 100))}%` }} />
-              </div>
-              <div className="brow-detail">{b.detail}</div>
-            </div>
-          )
-        })}
       </div>
     </div>
   )
