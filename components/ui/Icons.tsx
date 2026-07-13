@@ -108,6 +108,33 @@ export function WaveIcon(props: IconProps) {
   )
 }
 
+export function RulerIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 15l5-9 11 6-5 9z" />
+      <path d="M9.5 12.7l1-1.8M12 14.1l1-1.8M14.5 15.6l1-1.8" />
+    </svg>
+  )
+}
+
+export function CoinIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v9M9.5 9.3c0-1 1-1.8 2.5-1.8s2.5.8 2.5 1.7c0 2.3-5 1-5 3.3 0 1 1 1.8 2.5 1.8s2.5-.8 2.5-1.8" />
+    </svg>
+  )
+}
+
+export function ThermoIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 14.5V5a2 2 0 10-4 0v9.5a4 4 0 104 0z" />
+      <circle cx="10" cy="17" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function SearchIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" {...props}>

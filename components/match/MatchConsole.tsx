@@ -6,8 +6,18 @@ import { TileSelect } from '@/components/ui/TileSelect'
 import type { SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
 import { Ring } from '@/components/ui/Ring'
-import { Radar } from '@/components/match/Radar'
-import { BarsIcon, RunIcon, TriIcon, BikeIcon, BuildingIcon, MountainIcon, WaveIcon } from '@/components/ui/Icons'
+import {
+  BarsIcon,
+  RunIcon,
+  TriIcon,
+  BikeIcon,
+  BuildingIcon,
+  MountainIcon,
+  WaveIcon,
+  RulerIcon,
+  CoinIcon,
+  ThermoIcon,
+} from '@/components/ui/Icons'
 import {
   computeMatch,
   distanceLabel,
@@ -18,6 +28,8 @@ import {
   terrainAvailable,
   DISTANCE_OPTIONS,
   defaultDistanceFor,
+  TERRAIN_OPTIONS,
+  defaultTerrainFor,
   MATCH_WEIGHTS,
   type MatchPreferences,
 } from '@/lib/events'
@@ -29,11 +41,11 @@ const SPORTS: SegOption<Discipline>[] = [
   { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon /> },
 ]
 
-const TERRAINS: SegOption<Terrain>[] = [
-  { key: 'Urbano', label: 'Urbano', icon: <BuildingIcon /> },
-  { key: 'Montaña', label: 'Montaña', icon: <MountainIcon /> },
-  { key: 'Agua', label: 'Agua', icon: <WaveIcon /> },
-]
+const TERRAIN_META: Record<Terrain, { icon: SegOption<Terrain>['icon'] }> = {
+  Urbano: { icon: <BuildingIcon /> },
+  Montaña: { icon: <MountainIcon /> },
+  Agua: { icon: <WaveIcon /> },
+}
 
 const LEVELS: SegOption<Exigencia>[] = [
   { key: 'Principiante', label: 'Principiante', icon: <BarsIcon active={1} /> },
@@ -58,7 +70,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const [pref, setPref] = useState<MatchPreferences>({
     sport: 'Running',
     distance: defaultDistanceFor('Running'),
-    terrain: 'Urbano',
+    terrain: defaultTerrainFor('Running'),
     exigencia: 'Intermedio',
     climateIdeal: 16,
     elevationBucket: 'Ondulado',
@@ -83,13 +95,18 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const eventElevation = top.event.elevation_gain_m ?? 0
   const eventCost = costRange(top.event).max
   const eventDistances = distanceLabel(pref.sport, top.event)
+  const terrainOptions: SegOption<Terrain>[] = TERRAIN_OPTIONS[pref.sport].map((t) => ({
+    key: t,
+    label: t,
+    icon: TERRAIN_META[t].icon,
+  }))
 
-  // Orden del radar (arriba, en sentido horario): Distancia, Terreno, Costo, Exigencia, Desnivel, Clima.
   const breakdown = [
     {
       label: 'Distancia',
       weight: MATCH_WEIGHTS.distance,
       earned: top.distFrac,
+      icon: <RulerIcon />,
       detail:
         top.distFrac === 1
           ? `Coincide: ofrece ${eventDistances}`
@@ -99,6 +116,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       label: 'Terreno',
       weight: MATCH_WEIGHTS.terrain,
       earned: top.terrainOk ? 1 : 0,
+      icon: TERRAIN_META[top.event.terrain].icon,
       detail: noTerrainForSport
         ? `Todavía no tenemos carreras de ${pref.terrain} en ${pref.sport.toLowerCase()}`
         : top.terrainOk
@@ -109,6 +127,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       label: 'Costo',
       weight: MATCH_WEIGHTS.cost,
       earned: top.costFrac,
+      icon: <CoinIcon />,
       detail:
         top.costFrac === 1
           ? `Coincide: ${costBucket(pref.sport, eventCost)} (${costLabel(top.event)} estimado)`
@@ -118,6 +137,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       label: 'Exigencia',
       weight: MATCH_WEIGHTS.level,
       earned: top.levelFrac,
+      icon: <BarsIcon active={3} />,
       detail:
         top.levelFrac === 1
           ? `Coincide: nivel ${top.event.exigencia}`
@@ -127,6 +147,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       label: 'Desnivel',
       weight: MATCH_WEIGHTS.elevation,
       earned: top.elevationFrac,
+      icon: <MountainIcon />,
       detail:
         top.elevationFrac === 1
           ? `Coincide: ${elevationBucket(pref.sport, eventElevation)} (+${eventElevation}m)`
@@ -136,6 +157,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       label: 'Clima',
       weight: MATCH_WEIGHTS.climate,
       earned: top.climateFrac,
+      icon: <ThermoIcon />,
       detail: `${top.event.temp_avg_c}°C en el evento, ideal ${pref.climateIdeal}°C`,
     },
   ]
@@ -144,14 +166,12 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const scoreTier = tier(top.matchScore / 100)
   const scoreTierLabel = { good: 'Match fuerte', warn: 'Match parcial', bad: 'Match débil' }[scoreTier]
 
-  const radarAxes = breakdown.map((b) => ({ label: b.label, value: b.earned }))
-
   const strongCount = breakdown.filter((b) => b.earned >= 0.75).length
   const weakest = [...breakdown].sort((a, b) => a.earned - b.earned)[0]
   const summary =
     strongCount === breakdown.length
-      ? `Los ${breakdown.length} ejes calzan casi perfecto con tu perfil.`
-      : `${strongCount} de ${breakdown.length} ejes calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
+      ? `Los ${breakdown.length} criterios calzan casi perfecto con tu perfil.`
+      : `${strongCount} de ${breakdown.length} criterios calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
 
   return (
     <div className="console-shell">
@@ -178,13 +198,13 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           <TileSelect
             options={SPORTS}
             value={pref.sport}
-            onChange={(sport) => setPref((p) => ({ ...p, sport, distance: defaultDistanceFor(sport) }))}
+            onChange={(sport) =>
+              setPref((p) => ({ ...p, sport, distance: defaultDistanceFor(sport), terrain: defaultTerrainFor(sport) }))
+            }
           />
         </div>
         <div className="rail-block">
-          <span className="clabel">
-            Distancia {pref.sport === 'Triatlón' ? '(formato)' : null}
-          </span>
+          <span className="clabel">Distancia {pref.sport === 'Triatlón' ? '(formato)' : null}</span>
           <TileSelect
             options={DISTANCE_OPTIONS[pref.sport]}
             value={pref.distance}
@@ -194,7 +214,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
         <div className="rail-pair">
           <div>
             <span className="clabel">Terreno</span>
-            <TileSelect options={TERRAINS} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+            <TileSelect options={terrainOptions} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
           </div>
           <div>
             <span className="clabel">Exigencia</span>
@@ -225,20 +245,19 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
         <div className="report-eyebrow">Informe de compatibilidad</div>
         <div className="report-title">Tu perfil vs. {top.event.name}</div>
 
-        <div className="radar-wrap">
-          <Radar axes={radarAxes} tone={scoreTier} />
-          <div className="radar-legend">
-            <div className="li">
-              <span className="sw ideal" />
-              Tu perfil ideal <strong>(100%)</strong>
-            </div>
-            <div className="li">
-              <span className={`sw actual tone-${scoreTier}`} />
-              {top.event.name}
-            </div>
-            <div className="li summary">{summary}</div>
-          </div>
+        <div className="stat-grid">
+          {breakdown.map((b) => {
+            const t = tier(b.earned)
+            return (
+              <div className={`stat-tile tone-${t}`} key={b.label}>
+                <div className="stat-tile-icon">{b.icon}</div>
+                <div className="stat-tile-value">{Math.round(b.earned * 100)}%</div>
+                <div className="stat-tile-label">{b.label}</div>
+              </div>
+            )
+          })}
         </div>
+        <p className="report-summary">{summary}</p>
 
         <div className="report-footer">
           <Ring score={top.matchScore} size={56} stroke={5} className={`ring-tone-${scoreTier}`} />

@@ -176,6 +176,17 @@ export function terrainAvailable(events: EventRow[], sport: Discipline, terrain:
   return events.some((e) => e.discipline === sport && e.terrain === terrain)
 }
 
+/** No se puede correr en el agua ni hacer triatlón sin nadar — el terreno posible también depende del deporte. */
+export const TERRAIN_OPTIONS: Record<Discipline, Terrain[]> = {
+  Running: ['Urbano', 'Montaña'],
+  Triatlón: ['Agua'],
+  Ciclismo: ['Urbano', 'Montaña'],
+}
+
+export function defaultTerrainFor(sport: Discipline): Terrain {
+  return TERRAIN_OPTIONS[sport][0]
+}
+
 export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchResult[] {
   return events
     .filter((e) => e.discipline === pref.sport)
