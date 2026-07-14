@@ -1292,45 +1292,148 @@ input[type='range'].climate-input::-moz-range-thumb {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
-.sport-card {
-  background: var(--surface);
-  border: 1px solid var(--border-soft);
+.sport-vibe-card {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--r-lg);
-  padding: 26px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(160deg, #2a3f56 0%, #12181f 65%);
+  padding: 22px;
+  text-align: left;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  animation: cardIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.sport-card:hover {
-  border-color: var(--border);
-  background: var(--surface-2);
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.sport-card .icon-badge {
-  width: 40px;
-  height: 40px;
+.sport-vibe-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 24px 44px -20px rgba(0, 0, 0, 0.55);
+}
+.sport-vibe-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.25) 0%, rgba(10, 10, 12, 0.55) 45%, rgba(10, 10, 12, 0.94) 100%);
+  z-index: 1;
+}
+.svc-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.05);
+  transition: transform 0.4s ease;
+}
+.sport-vibe-card:hover .svc-bg {
+  transform: scale(1.06);
+}
+.svc-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.svc-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
   border-radius: var(--r-md);
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
 }
-.sport-card .icon-badge svg {
-  width: 19px;
-  height: 19px;
-  stroke: var(--text);
+.svc-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #fff;
 }
-.sport-card h3 {
-  font-size: 1.05rem;
+.svc-name {
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  margin-bottom: 18px;
+  color: #fff;
 }
-.sport-card .sc-row {
+.svc-count {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+.svc-board {
+  position: relative;
+  z-index: 2;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: auto;
+}
+.svc-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+}
+.svc-medal {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.svc-rname {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.svc-rscore {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6ee7b7;
+}
+.svc-bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-end;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-soft);
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.svc-next {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+}
+.svc-cta {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #fff;
 }
 
 /* ---------- card ---------- */
