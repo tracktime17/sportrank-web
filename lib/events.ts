@@ -1,4 +1,4 @@
-import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
+import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
 
 // Funciones puras, sin ningún import de Supabase server / next/headers.
 // Se pueden usar tanto desde Server Components como desde Client Components
@@ -7,22 +7,39 @@ import type { Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/ty
 
 /* =========================================================
    MOTOR DE MATCH — primero el deporte (no se mezcla running
-   con triatlón), luego distancia / terreno / clima / exigencia
-   / desnivel / costo dentro de esa disciplina.
+   con triatlón), luego 8 criterios dentro de esa disciplina:
+   distancia, terreno, clima (sensación térmica), exigencia,
+   desnivel, costo, presión del tiempo de corte y temporada.
 
-   La distancia, el desnivel y el costo NO se miden igual en los
-   3 deportes (un runner piensa en 5K/10K/21K/42K, un triatleta en
-   Sprint/Olímpico/70.3/140.6, y lo que es "montañoso" para un
+   El PESO de cada criterio depende del objetivo que elige el
+   usuario (disfrutar / mejorar marca / competir) — no es el
+   mismo "buen match" para alguien que quiere pasarlo bien que
+   para alguien que quiere competir en serio. Ver WEIGHT_PROFILES.
+
+   La distancia, el desnivel y el costo tampoco se miden igual en
+   los 3 deportes (un runner piensa en 5K/10K/21K/42K, un triatleta
+   en Sprint/Olímpico/70.3/140.6, y lo que es "montañoso" para un
    corredor es apenas ondulado para un ciclista) — por eso cada
    deporte tiene su propio vocabulario y sus propios umbrales en
    vez de un solo bucket genérico aplicado a los 3 por igual.
 ========================================================= */
-export const MATCH_WEIGHTS = { distance: 20, terrain: 15, climate: 15, level: 15, elevation: 15, cost: 20 } as const
+export type MatchGoal = 'Disfrutar' | 'Mejorar marca' | 'Competir'
+
+export const WEIGHT_PROFILES: Record<
+  MatchGoal,
+  { distance: number; terrain: number; climate: number; level: number; elevation: number; cost: number; cutoff: number; season: number }
+> = {
+  Disfrutar: { climate: 18, cost: 16, cutoff: 16, terrain: 12, distance: 12, elevation: 8, level: 8, season: 10 },
+  'Mejorar marca': { climate: 18, elevation: 16, distance: 16, terrain: 12, level: 12, cost: 10, cutoff: 8, season: 8 },
+  Competir: { level: 22, distance: 16, terrain: 14, elevation: 12, climate: 10, cost: 8, cutoff: 6, season: 12 },
+}
 
 export type ElevationBucket = 'Llano' | 'Ondulado' | 'Montañoso'
 export type CostBucket = 'Bajo' | 'Medio' | 'Alto'
+export type Season = 'Próximo mes' | 'Este semestre' | 'Sin apuro'
 
 export interface MatchPreferences {
+  goal: MatchGoal
   sport: Discipline
   distance: string
   terrain: Terrain
@@ -30,6 +47,8 @@ export interface MatchPreferences {
   climateIdeal: number
   elevationBucket: ElevationBucket
   costBucket: CostBucket
+  cutoffPressure: CutoffPressure
+  season: Season
 }
 
 const STEP_FRAC_4 = [1, 0.55, 0.2, 0] // 0, 1, 2, 3 escalones de distancia
@@ -37,6 +56,10 @@ const LEVEL_ORDER: Exigencia[] = ['Principiante', 'Intermedio', 'Avanzado']
 const LEVEL_STEP_FRAC = [1, 0.5, 0]
 const ELEVATION_STEP_FRAC = [1, 0.4, 0]
 const COST_STEP_FRAC = [1, 0.4, 0]
+const CUTOFF_ORDER: CutoffPressure[] = ['Generoso', 'Moderado', 'Estricto']
+const CUTOFF_STEP_FRAC = [1, 0.45, 0]
+const SEASON_ORDER: Season[] = ['Próximo mes', 'Este semestre', 'Sin apuro']
+const SEASON_STEP_FRAC = [1, 0.5, 0.15]
 
 function stepFrac<T>(order: T[], steps: number[], a: T, b: T) {
   const diff = Math.abs(order.indexOf(a) - order.indexOf(b))
@@ -160,6 +183,22 @@ export function costBucket(sport: Discipline, total: number): CostBucket {
   return scale.order[bucketIndex(total, scale.breakpoints)]
 }
 
+/* ---------- sensación térmica: temperatura ajustada por humedad ---------- */
+/** Aproximación simple: sobre 20°C, la humedad alta hace que se sienta más calor (y la humedad baja, más fresco). No es un índice de calor oficial, pero capta la idea que un corredor de verdad nota. */
+export function feelsLikeC(tempC: number, humidityPct: number): number {
+  if (tempC < 20) return tempC
+  const adjustment = ((humidityPct - 50) / 50) * (tempC - 20) * 0.15
+  return Math.round((tempC + adjustment) * 10) / 10
+}
+
+/* ---------- temporada: cuánto falta para el evento ---------- */
+export function seasonBucket(eventDateISO: string, now: Date = new Date()): Season {
+  const days = (new Date(eventDateISO).getTime() - now.getTime()) / 86_400_000
+  if (days <= 80) return 'Próximo mes'
+  if (days <= 160) return 'Este semestre'
+  return 'Sin apuro'
+}
+
 export interface MatchResult {
   event: EventRow
   matchScore: number
@@ -169,6 +208,9 @@ export interface MatchResult {
   climateFrac: number
   elevationFrac: number
   costFrac: number
+  cutoffFrac: number
+  seasonFrac: number
+  feelsLike: number
 }
 
 /** ¿Hay al menos un evento de este deporte con el terreno pedido? Si no, mostramos un mensaje honesto en vez de un 0% que parece un bug. */
@@ -188,14 +230,19 @@ export function defaultTerrainFor(sport: Discipline): Terrain {
 }
 
 export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchResult[] {
+  const weights = WEIGHT_PROFILES[pref.goal]
+
   return events
     .filter((e) => e.discipline === pref.sport)
     .map((e) => {
       const distFrac = distanceFrac(pref.sport, e, pref.distance)
       const terrainOk = e.terrain === pref.terrain
       const levelFrac = stepFrac(LEVEL_ORDER, LEVEL_STEP_FRAC, e.exigencia, pref.exigencia)
-      const climateDiff = Math.abs((e.temp_avg_c ?? pref.climateIdeal) - pref.climateIdeal)
+
+      const feelsLike = feelsLikeC(e.temp_avg_c ?? pref.climateIdeal, e.humidity_pct ?? 50)
+      const climateDiff = Math.abs(feelsLike - pref.climateIdeal)
       const climateFrac = Math.max(0, 1 - Math.min(1, climateDiff / 15))
+
       const elevationFrac = stepFrac(
         ELEVATION_SCALES[pref.sport].order,
         ELEVATION_STEP_FRAC,
@@ -208,14 +255,18 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
         costBucket(pref.sport, costRange(e).max),
         pref.costBucket
       )
+      const cutoffFrac = stepFrac(CUTOFF_ORDER, CUTOFF_STEP_FRAC, e.cutoff_pressure, pref.cutoffPressure)
+      const seasonFrac = stepFrac(SEASON_ORDER, SEASON_STEP_FRAC, seasonBucket(e.event_date), pref.season)
 
       const raw =
-        distFrac * MATCH_WEIGHTS.distance +
-        (terrainOk ? MATCH_WEIGHTS.terrain : 0) +
-        climateFrac * MATCH_WEIGHTS.climate +
-        levelFrac * MATCH_WEIGHTS.level +
-        elevationFrac * MATCH_WEIGHTS.elevation +
-        costFrac * MATCH_WEIGHTS.cost
+        distFrac * weights.distance +
+        (terrainOk ? weights.terrain : 0) +
+        climateFrac * weights.climate +
+        levelFrac * weights.level +
+        elevationFrac * weights.elevation +
+        costFrac * weights.cost +
+        cutoffFrac * weights.cutoff +
+        seasonFrac * weights.season
 
       return {
         event: e,
@@ -226,6 +277,9 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
         climateFrac,
         elevationFrac,
         costFrac,
+        cutoffFrac,
+        seasonFrac,
+        feelsLike,
       }
     })
     .sort((a, b) => b.matchScore - a.matchScore)

@@ -5,6 +5,7 @@
 export type Discipline = 'Running' | 'Triatlón' | 'Ciclismo'
 export type Terrain = 'Urbano' | 'Montaña' | 'Agua'
 export type Exigencia = 'Principiante' | 'Intermedio' | 'Avanzado'
+export type CutoffPressure = 'Generoso' | 'Moderado' | 'Estricto'
 
 export interface EventRow {
   id: string
@@ -47,6 +48,7 @@ export interface EventRow {
   lodging_min_clp: number
   lodging_max_clp: number
   kit_includes: string[] | null
+  cutoff_pressure: CutoffPressure
   is_published: boolean
   created_at: string
   updated_at: string
