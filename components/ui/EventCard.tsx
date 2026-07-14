@@ -2,12 +2,27 @@
 
 import Link from 'next/link'
 import type { MouseEvent } from 'react'
-import { Ring } from '@/components/ui/Ring'
 import { DISCIPLINE_ICON, HeartIcon, CompareIcon } from '@/components/ui/Icons'
 import { useFavorites } from '@/lib/store/useFavorites'
 import { useCompare } from '@/lib/store/useCompare'
-import { costLabel } from '@/lib/events'
 import type { EventRow } from '@/lib/supabase/types'
+
+function formatEntrants(n: number | null): string | null {
+  if (!n) return null
+  if (n >= 1000) return `${Math.round(n / 100) / 10}K corredores`
+  return `${n} corredores`
+}
+
+function bestSignal(e: EventRow): { icon: string; label: string } | null {
+  const rating = Number(e.rating ?? 0)
+  if (rating >= 4.8) return { icon: '⭐', label: 'Mejor calificada' }
+  if ((e.entrants ?? 0) >= 10000) return { icon: '🔥', label: 'Carrera masiva' }
+  if (e.landscape_rating === 5) return { icon: '🏞️', label: 'Paisaje excepcional' }
+  if ((e.pr_probability ?? 0) >= 75) return { icon: '📈', label: 'Alta prob. de PR' }
+  const topPct = e.position_label ? parseInt(e.position_label.replace(/\D/g, ''), 10) : NaN
+  if (!Number.isNaN(topPct) && topPct <= 10) return { icon: '🏆', label: e.position_label! }
+  return null
+}
 
 export function EventCard({ event }: { event: EventRow }) {
   const { isFavorite, toggle: toggleFavorite } = useFavorites()
@@ -15,6 +30,8 @@ export function EventCard({ event }: { event: EventRow }) {
   const DiscIcon = DISCIPLINE_ICON[event.discipline]
   const fav = isFavorite(event.id)
   const compared = isCompared(event.id)
+  const signal = bestSignal(event)
+  const entrantsLabel = formatEntrants(event.entrants)
 
   function onToggleFav(e: MouseEvent) {
     e.preventDefault()
@@ -30,6 +47,11 @@ export function EventCard({ event }: { event: EventRow }) {
 
   return (
     <Link href={`/eventos/${event.slug}`} className="card">
+      {event.image_url && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img className="card-bg" src={event.image_url} alt="" />
+      )}
+
       <div className="card-top">
         <div className="card-disc">
           <div className="icon-badge-sm">
@@ -57,25 +79,23 @@ export function EventCard({ event }: { event: EventRow }) {
         </div>
       </div>
 
-      <div>
+      {signal && (
+        <div className="card-signal">
+          {signal.icon} {signal.label}
+        </div>
+      )}
+
+      <div className="card-bottom">
+        <div className="card-score-badge">{event.score ?? 0}%</div>
         <div className="card-name">{event.name}</div>
+        {event.blurb && <p className="card-blurb">{event.blurb}</p>}
         <div className="card-meta">
           {event.city} ·{' '}
           {new Date(event.event_date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })}
         </div>
-      </div>
-
-      <div className="card-score-row">
-        <Ring score={event.score ?? 0} size={52} stroke={5} fontSize={15} />
-        <div className="card-stats-mini">
-          <div className="mini-stat">
-            <div className="v">{event.pr_probability ?? '—'}%</div>
-            <div className="l">Prob. PR</div>
-          </div>
-          <div className="mini-stat">
-            <div className="v">{costLabel(event)}</div>
-            <div className="l">Costo total</div>
-          </div>
+        <div className="card-social-row">
+          {event.rating && <span className="card-chip">★ {event.rating}</span>}
+          {entrantsLabel && <span className="card-chip">{entrantsLabel}</span>}
         </div>
       </div>
     </Link>
