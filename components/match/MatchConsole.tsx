@@ -18,8 +18,8 @@ import {
   ThermoIcon,
   ClockIcon,
   CalendarIcon,
-  TargetIcon,
   ShareIcon,
+  BackIcon,
 } from '@/components/ui/Icons'
 import {
   computeMatch,
@@ -87,6 +87,44 @@ const SEASONS: SegOption<MatchPreferences['season']>[] = [
   { key: 'Sin apuro', label: 'Sin apuro' },
 ]
 
+const SPORT_META: Record<Discipline, { noun: string; verb: string; genderSuffix: 'a' | 'o' }> = {
+  Running: { noun: 'carrera', verb: 'correr', genderSuffix: 'a' },
+  Triatlón: { noun: 'triatlón', verb: 'competir', genderSuffix: 'o' },
+  Ciclismo: { noun: 'fondo', verb: 'pedalear', genderSuffix: 'o' },
+}
+
+const TOTAL_STEPS = 7
+
+function questionFor(step: number, sport: Discipline, hasTerrainChoice: boolean): { q: string; sub?: string } {
+  const meta = SPORT_META[sport]
+  switch (step) {
+    case 0:
+      return { q: '¿Qué deporte te mueve?', sub: 'Ajustamos cada pregunta siguiente a tu disciplina.' }
+    case 1:
+      return {
+        q: `Para tu próxim${meta.genderSuffix} ${meta.noun}, ¿qué buscas?`,
+        sub: 'Esto reordena qué tan importante es cada factor en tu match.',
+      }
+    case 2:
+      return sport === 'Triatlón' ? { q: '¿Qué formato de triatlón buscas?' } : { q: `¿Qué distancia quieres ${meta.verb}?` }
+    case 3:
+      return hasTerrainChoice
+        ? { q: `¿Dónde te gusta ${meta.verb} y qué tan exigente lo quieres?` }
+        : { q: '¿Qué tan exigente quieres tu triatlón?' }
+    case 4:
+      return { q: '¿Cuánto desnivel aguantas y qué presupuesto manejas?' }
+    case 5:
+      return { q: '¿Qué tan ajustado quieres el tiempo de corte, y para cuándo?' }
+    case 6:
+      return {
+        q: '¿Cuál es tu clima ideal para rendir al máximo?',
+        sub: 'Usamos la sensación térmica real de cada carrera, no solo la temperatura.',
+      }
+    default:
+      return { q: '' }
+  }
+}
+
 function useAnimatedNumber(target: number, duration = 650) {
   const [value, setValue] = useState(target)
   const fromRef = useRef(target)
@@ -116,6 +154,11 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+  const [quizStep, setQuizStep] = useState(0)
+  const [quizDone, setQuizDone] = useState(false)
+  const [justRevealed, setJustRevealed] = useState(false)
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const revealRef = useRef<HTMLDivElement>(null)
   const [pref, setPref] = useState<MatchPreferences>({
     goal: 'Mejorar marca',
     sport: 'Running',
@@ -129,9 +172,29 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     season: 'Este semestre',
   })
 
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current)
+  }, [])
+
+  function selectAndAdvance(update: (p: MatchPreferences) => MatchPreferences) {
+    setPref(update)
+    if (advanceTimer.current) clearTimeout(advanceTimer.current)
+    advanceTimer.current = setTimeout(() => setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1)), 320)
+  }
+
+  function handleFinish() {
+    setQuizDone(true)
+    setJustRevealed(true)
+    setTimeout(() => setJustRevealed(false), 1200)
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setTimeout(() => revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    }
+  }
+
   const ranked = useMemo(() => computeMatch(events, pref), [events, pref])
   const top = ranked[0]
   const animatedScore = useAnimatedNumber(top?.matchScore ?? 0)
+  const sportCount = events.filter((e) => e.discipline === pref.sport).length
 
   if (!top) {
     return (
@@ -153,6 +216,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     label: t,
     icon: TERRAIN_META[t].icon,
   }))
+  const hasTerrainChoice = terrainOptions.length > 1
   const weights = WEIGHT_PROFILES[pref.goal]
 
   const breakdown = [
@@ -255,6 +319,21 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       ? `Los ${breakdown.length} criterios calzan casi perfecto con tu perfil.`
       : `${strongCount} de ${breakdown.length} criterios calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
 
+  const { q: question, sub: questionSub } = questionFor(quizStep, pref.sport, hasTerrainChoice)
+
+  const summaryChips = [
+    pref.sport,
+    pref.goal,
+    pref.distance,
+    ...(hasTerrainChoice ? [pref.terrain] : []),
+    pref.exigencia,
+    pref.elevationBucket,
+    pref.costBucket,
+    pref.cutoffPressure,
+    pref.season,
+    `${pref.climateIdeal}°C ideal`,
+  ]
+
   async function handleShare() {
     const shareText = `${top!.matchScore}% de compatibilidad con ${top!.event.name} — encontrado en NextRace`
     const shareUrl = typeof window !== 'undefined' ? window.location.origin + `/eventos/${top!.event.slug}` : undefined
@@ -279,88 +358,158 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
         <div className="console-head">
           <div>
             <h3>Encuentra tu match</h3>
-            <p className="sub">Tu perfil de carrera, en segundos.</p>
+            <p className="sub">Responde {TOTAL_STEPS} preguntas y descubre tu carrera ideal.</p>
           </div>
           <div className="console-badge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 7v5l3 3" />
             </svg>
-            {events.length} carreras evaluadas
+            {sportCount} carreras de {pref.sport.toLowerCase()} evaluadas
           </div>
         </div>
 
-        <div className="rail-block">
-          <span className="clabel">
-            <TargetIcon style={{ width: 12, height: 12, marginRight: 4, verticalAlign: -1.5 }} />
-            Tu objetivo
-          </span>
-          <TileSelect options={GOALS} value={pref.goal} onChange={(goal) => setPref((p) => ({ ...p, goal }))} />
-        </div>
-        <div className="rail-block">
-          <span className="clabel">Deporte</span>
-          <TileSelect
-            options={SPORTS}
-            value={pref.sport}
-            onChange={(sport) =>
-              setPref((p) => ({ ...p, sport, distance: defaultDistanceFor(sport), terrain: defaultTerrainFor(sport) }))
-            }
-          />
-        </div>
-        <div className="rail-block">
-          <span className="clabel">Distancia {pref.sport === 'Triatlón' ? '(formato)' : null}</span>
-          <TileSelect
-            options={DISTANCE_OPTIONS[pref.sport]}
-            value={pref.distance}
-            onChange={(distance) => setPref((p) => ({ ...p, distance }))}
-          />
-        </div>
-        <div className="rail-pair">
-          <div>
-            <span className="clabel">Terreno</span>
-            <TileSelect options={terrainOptions} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+        {quizDone ? (
+          <div className="quiz-summary">
+            <span className="clabel">Tu perfil</span>
+            <div className="quiz-summary-chips">
+              {summaryChips.map((c, i) => (
+                <span className="reveal-chip" key={i}>
+                  {c}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="quiz-edit"
+              onClick={() => {
+                setQuizDone(false)
+                setQuizStep(0)
+              }}
+            >
+              ✎ Editar mis respuestas
+            </button>
           </div>
-          <div>
-            <span className="clabel">Exigencia</span>
-            <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
+        ) : (
+          <div className="quiz-card">
+            <div className="quiz-progress">
+              {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                <div key={i} className={`quiz-seg ${i < quizStep ? 'done' : i === quizStep ? 'current' : ''}`} />
+              ))}
+            </div>
+            <div className="quiz-step-count">
+              Pregunta {quizStep + 1} de {TOTAL_STEPS}
+            </div>
+
+            <div className="quiz-body" key={quizStep}>
+              <h4 className="quiz-question">{question}</h4>
+              {questionSub && <p className="quiz-sub">{questionSub}</p>}
+
+              {quizStep === 0 && (
+                <TileSelect
+                  options={SPORTS}
+                  value={pref.sport}
+                  onChange={(sport) =>
+                    selectAndAdvance((p) => ({ ...p, sport, distance: defaultDistanceFor(sport), terrain: defaultTerrainFor(sport) }))
+                  }
+                />
+              )}
+
+              {quizStep === 1 && (
+                <TileSelect options={GOALS} value={pref.goal} onChange={(goal) => selectAndAdvance((p) => ({ ...p, goal }))} />
+              )}
+
+              {quizStep === 2 && (
+                <TileSelect
+                  options={DISTANCE_OPTIONS[pref.sport]}
+                  value={pref.distance}
+                  onChange={(distance) => selectAndAdvance((p) => ({ ...p, distance }))}
+                />
+              )}
+
+              {quizStep === 3 && (
+                <div className={hasTerrainChoice ? 'rail-pair' : 'rail-block'}>
+                  {hasTerrainChoice && (
+                    <div>
+                      <span className="clabel">Terreno</span>
+                      <TileSelect options={terrainOptions} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
+                    </div>
+                  )}
+                  <div>
+                    <span className="clabel">Exigencia</span>
+                    <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 4 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Desnivel</span>
+                    <TileSelect
+                      options={ELEVATIONS}
+                      value={pref.elevationBucket}
+                      onChange={(elevationBucket) => setPref((p) => ({ ...p, elevationBucket }))}
+                    />
+                  </div>
+                  <div>
+                    <span className="clabel">Costo</span>
+                    <TileSelect options={BUDGETS} value={pref.costBucket} onChange={(costBucket) => setPref((p) => ({ ...p, costBucket }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 5 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Tiempo de corte</span>
+                    <TileSelect
+                      options={CUTOFFS}
+                      value={pref.cutoffPressure}
+                      onChange={(cutoffPressure) => setPref((p) => ({ ...p, cutoffPressure }))}
+                    />
+                  </div>
+                  <div>
+                    <span className="clabel">¿Cuándo?</span>
+                    <TileSelect options={SEASONS} value={pref.season} onChange={(season) => setPref((p) => ({ ...p, season }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 6 && (
+                <div className="rail-block" style={{ marginBottom: 0 }}>
+                  <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
+                </div>
+              )}
+            </div>
+
+            {(quizStep > 0 || quizStep >= 3) && (
+              <div className="quiz-nav">
+                {quizStep > 0 ? (
+                  <button type="button" className="quiz-back" onClick={() => setQuizStep((s) => Math.max(0, s - 1))}>
+                    <BackIcon /> Atrás
+                  </button>
+                ) : (
+                  <span />
+                )}
+                {quizStep >= 3 && quizStep <= 5 && (
+                  <button type="button" className="quiz-continue" onClick={() => setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1))}>
+                    Continuar
+                  </button>
+                )}
+                {quizStep === 6 && (
+                  <button type="button" className="quiz-continue" onClick={handleFinish}>
+                    Ver mi match →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="rail-pair">
-          <div>
-            <span className="clabel">Desnivel</span>
-            <TileSelect
-              options={ELEVATIONS}
-              value={pref.elevationBucket}
-              onChange={(elevationBucket) => setPref((p) => ({ ...p, elevationBucket }))}
-            />
-          </div>
-          <div>
-            <span className="clabel">Costo</span>
-            <TileSelect options={BUDGETS} value={pref.costBucket} onChange={(costBucket) => setPref((p) => ({ ...p, costBucket }))} />
-          </div>
-        </div>
-        <div className="rail-pair">
-          <div>
-            <span className="clabel">Tiempo de corte</span>
-            <TileSelect
-              options={CUTOFFS}
-              value={pref.cutoffPressure}
-              onChange={(cutoffPressure) => setPref((p) => ({ ...p, cutoffPressure }))}
-            />
-          </div>
-          <div>
-            <span className="clabel">¿Cuándo?</span>
-            <TileSelect options={SEASONS} value={pref.season} onChange={(season) => setPref((p) => ({ ...p, season }))} />
-          </div>
-        </div>
-        <div className="rail-block" style={{ marginBottom: 0 }}>
-          <span className="clabel">Clima ideal</span>
-          <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
-        </div>
+        )}
       </div>
 
-      <div>
-        <div className={`reveal-card tone-${scoreTier}`}>
+      <div ref={revealRef}>
+        <div className={`reveal-card tone-${scoreTier} ${justRevealed ? 'just-revealed' : ''}`}>
           {top.event.image_url && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img className="reveal-bg" src={top.event.image_url} alt="" />
