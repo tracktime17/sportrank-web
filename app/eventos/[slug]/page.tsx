@@ -5,13 +5,37 @@ import { Ring } from '@/components/ui/Ring'
 import { ElevationChart } from '@/components/ui/ElevationChart'
 import { CheckIcon } from '@/components/ui/Icons'
 import { EventCard } from '@/components/ui/EventCard'
-import { DetailActions } from './DetailActions'
+import { DetailBack, DetailCtaRow } from './DetailActions'
 
 const SAMPLE_REVIEWS = [
   { who: 'Camila R.', stars: 5, text: 'El clima y el circuito coincidieron con lo que predijo el score.' },
   { who: 'Matías V.', stars: 5, text: 'La organización estuvo a la altura del desafío. Repetiría sin dudar.' },
   { who: 'Francisca A.', stars: 4, text: 'Superó lo que esperaba en ambiente. Vale cada peso.' },
 ]
+
+const AVATAR_COLORS = ['#2f9bff', '#22c55e', '#f59e0b', '#a855f7', '#ef4444']
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('')
+}
+
+function colorFor(name: string) {
+  const sum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length]
+}
+
+function daysUntilLabel(eventDateISO: string) {
+  const days = Math.ceil((new Date(eventDateISO).getTime() - Date.now()) / 86_400_000)
+  if (days < 0) return null
+  if (days === 0) return '¡Es hoy!'
+  if (days === 1) return 'Es mañana'
+  return `Faltan ${days} días`
+}
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -30,19 +54,31 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     month: 'long',
     year: 'numeric',
   })
+  const countdown = daysUntilLabel(event.event_date)
 
   return (
     <div className="view-enter">
       <div className="detail-hero photo-panel">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={event.image_url ?? `https://picsum.photos/seed/${event.slug}/1600/900`} alt={event.name} />
-        <DetailActions eventId={event.id} />
+        <DetailBack />
         <div className="detail-hero-content wrap">
           <div className="eyebrow">{event.discipline}</div>
           <h1>{event.name}</h1>
           <div className="loc">
             {event.city}, {event.region} · {eventDate}
           </div>
+          {countdown && (
+            <div className="detail-countdown">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 3" />
+              </svg>
+              {countdown}
+            </div>
+          )}
+          {event.blurb && <p className="detail-hook">{event.blurb}</p>}
+          <DetailCtaRow eventId={event.id} eventName={event.name} />
         </div>
       </div>
 
@@ -91,10 +127,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
           <div>
             <h3>
-              Entre el <span>{event.position_label?.replace('Top ', '')}</span> de eventos donde tienes mayor
-              probabilidad de tu mejor resultado
+              Estás en el <span>{event.position_label}</span> de carreras donde más opciones tienes de lograr tu
+              mejor marca
             </h3>
-            <p className="blurb">{event.blurb}</p>
             <div className="perf-metrics">
               <div className="metric">
                 <div className="mval">{event.projected_time}</div>
@@ -120,13 +155,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           <div className="block-head">
             <h3 className="h">El circuito</h3>
           </div>
+          {event.circuit_type && <p className="route-hook">{event.circuit_type}</p>}
           <div className="route-card">
             <div>
               <ElevationChart elevation={event.elevation_gain_m ?? 0} />
               <div className="route-legend">
-                <div>
-                  Tipo<span>{event.circuit_type}</span>
-                </div>
                 <div>
                   Superficie<span>{event.surface}</span>
                 </div>
@@ -207,11 +240,32 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           <div className="block-head">
             <h3 className="h">Opiniones</h3>
           </div>
-          {SAMPLE_REVIEWS.map((r) => (
-            <div className="review-line" key={r.who}>
+          <div className="review-hero">
+            <span className="quote-mark">&ldquo;</span>
+            <p>{SAMPLE_REVIEWS[0].text}</p>
+            <div className="review-hero-who">
+              <span className="avatar" style={{ background: colorFor(SAMPLE_REVIEWS[0].who) }}>
+                {initials(SAMPLE_REVIEWS[0].who)}
+              </span>
               <div>
-                <div className="who">{r.who}</div>
-                <div className="txt">{r.text}</div>
+                <div className="who">{SAMPLE_REVIEWS[0].who}</div>
+                <div className="stars">
+                  {'★'.repeat(SAMPLE_REVIEWS[0].stars)}
+                  {'☆'.repeat(5 - SAMPLE_REVIEWS[0].stars)}
+                </div>
+              </div>
+            </div>
+          </div>
+          {SAMPLE_REVIEWS.slice(1).map((r) => (
+            <div className="review-line" key={r.who}>
+              <div className="review-line-who">
+                <span className="avatar sm" style={{ background: colorFor(r.who) }}>
+                  {initials(r.who)}
+                </span>
+                <div>
+                  <div className="who">{r.who}</div>
+                  <div className="txt">{r.text}</div>
+                </div>
               </div>
               <div className="stars">{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</div>
             </div>
