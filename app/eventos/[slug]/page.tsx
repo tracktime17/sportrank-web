@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import { getEventBySlug, getEvents } from '@/lib/events-server'
-import { costRange, fmtCLP, costLabel } from '@/lib/events'
+import { costRange, fmtCLP, costLabel, feelsLikeC } from '@/lib/events'
 import { Ring } from '@/components/ui/Ring'
 import { ElevationChart } from '@/components/ui/ElevationChart'
-import { CheckIcon } from '@/components/ui/Icons'
+import { CheckIcon, ThermoIcon, WaveIcon, MountainIcon, TrendUpIcon, UsersIcon, CoinIcon, ClockIcon, StarIcon } from '@/components/ui/Icons'
 import { EventCard } from '@/components/ui/EventCard'
+import { CircuitMapLoader } from '@/components/ui/CircuitMapLoader'
 import { DetailBack, DetailCtaRow } from './DetailActions'
 
 const SAMPLE_REVIEWS = [
@@ -37,6 +38,17 @@ function daysUntilLabel(eventDateISO: string) {
   return `Faltan ${days} días`
 }
 
+function scoreTier(score: number): 'good' | 'warn' | 'bad' {
+  const frac = score / 100
+  return frac >= 0.75 ? 'good' : frac >= 0.4 ? 'warn' : 'bad'
+}
+
+const PERF_TAGLINE: Record<'good' | 'warn' | 'bad', string> = {
+  good: '🔥 Este es tu momento — todo apunta a tu mejor marca.',
+  warn: '💪 Buenas condiciones. Con la preparación correcta, puedes destacar acá.',
+  bad: '🧭 No es tu match ideal, pero puede ser un lindo desafío.',
+}
+
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const event = await getEventBySlug(slug).catch(() => null)
@@ -55,6 +67,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     year: 'numeric',
   })
   const countdown = daysUntilLabel(event.event_date)
+  const feelsLike = feelsLikeC(event.temp_avg_c ?? 20, event.humidity_pct ?? 50)
+  const climbIntensity = event.km > 0 ? Math.round((event.elevation_gain_m ?? 0) / event.km) : 0
+  const tier = scoreTier(event.score ?? 0)
 
   return (
     <div className="view-enter">
@@ -93,30 +108,79 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
         )}
 
-        <div className="stat-grid6">
-          <div className="cell metric">
-            <div className="mval">{event.temp_avg_c}°</div>
-            <div className="mlbl">Temp.</div>
+        <div className="stat-grid8">
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <ThermoIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{feelsLike}°</div>
+              <span className="stat-tile-sub">Real: {event.temp_avg_c}°</span>
+            </div>
+            <div className="stat-tile-lbl">Sensación térmica</div>
           </div>
-          <div className="cell metric">
-            <div className="mval">{event.humidity_pct}%</div>
-            <div className="mlbl">Humedad</div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <WaveIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{event.humidity_pct}%</div>
+            </div>
+            <div className="stat-tile-lbl">Humedad</div>
           </div>
-          <div className="cell metric">
-            <div className="mval">{event.elevation_gain_m}m</div>
-            <div className="mlbl">Desnivel</div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <MountainIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{event.elevation_gain_m}m</div>
+            </div>
+            <div className="stat-tile-lbl">Desnivel total</div>
           </div>
-          <div className="cell metric">
-            <div className="mval">{event.entrants ? (event.entrants / 1000).toFixed(1) : '—'}k</div>
-            <div className="mlbl">Inscritos</div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <TrendUpIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{climbIntensity}m/km</div>
+            </div>
+            <div className="stat-tile-lbl">Intensidad</div>
           </div>
-          <div className="cell metric">
-            <div className="mval">{fmtCLP(event.price_clp)}</div>
-            <div className="mlbl">Inscripción</div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <UsersIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{event.entrants ? (event.entrants / 1000).toFixed(1) : '—'}k</div>
+            </div>
+            <div className="stat-tile-lbl">Inscritos</div>
           </div>
-          <div className="cell metric">
-            <div className="mval">{event.rating}</div>
-            <div className="mlbl">Rating</div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <CoinIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{fmtCLP(event.price_clp)}</div>
+            </div>
+            <div className="stat-tile-lbl">Inscripción</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <ClockIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{event.cutoff_pressure}</div>
+            </div>
+            <div className="stat-tile-lbl">Tiempo de corte</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-icon">
+              <StarIcon />
+            </div>
+            <div>
+              <div className="stat-tile-val">{event.rating}</div>
+            </div>
+            <div className="stat-tile-lbl">Rating</div>
           </div>
         </div>
 
@@ -124,6 +188,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           <div>
             <Ring score={event.score ?? 0} size={150} stroke={12} fontSize={38} />
             <div className="ring-lbl">Performance Score</div>
+            <div className={`perf-tagline tone-${tier}`}>{PERF_TAGLINE[tier]}</div>
           </div>
           <div>
             <h3>
@@ -134,18 +199,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <div className="metric">
                 <div className="mval">{event.projected_time}</div>
                 <div className="mlbl">Tiempo proyectado</div>
-              </div>
-              <div className="metric">
-                <div className="mval">{event.position_label}</div>
-                <div className="mlbl">Posición estimada</div>
+                <div className="msub">Según tu ritmo actual</div>
               </div>
               <div className="metric">
                 <div className="mval">{event.pr_probability}%</div>
                 <div className="mlbl">Prob. de PR</div>
+                <div className="msub">De lograr tu récord personal</div>
               </div>
               <div className="metric">
                 <div className="mval">{event.compatibility}%</div>
                 <div className="mlbl">Compatibilidad</div>
+                <div className="msub">Qué tan bien calza con lo que buscas</div>
               </div>
             </div>
           </div>
@@ -156,6 +220,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <h3 className="h">El circuito</h3>
           </div>
           {event.circuit_type && <p className="route-hook">{event.circuit_type}</p>}
+          {event.lat != null && event.lng != null && (
+            <CircuitMapLoader lat={event.lat} lng={event.lng} name={event.name} city={event.city} region={event.region} />
+          )}
           <div className="route-card">
             <div>
               <ElevationChart elevation={event.elevation_gain_m ?? 0} />

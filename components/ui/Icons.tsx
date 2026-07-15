@@ -174,6 +174,33 @@ export function ShareIcon(props: IconProps) {
   )
 }
 
+export function UsersIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+      <path d="M16 8.3a3 3 0 010 5.9M20.5 19c0-2.6-2-4.6-4.5-5" />
+    </svg>
+  )
+}
+
+export function TrendUpIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 17l6-6 4 4 8-9" />
+      <path d="M15 6h6v6" />
+    </svg>
+  )
+}
+
+export function StarIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.2 5.9-.8z" />
+    </svg>
+  )
+}
+
 export function SearchIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" {...props}>

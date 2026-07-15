@@ -17,6 +17,8 @@ export interface EventRow {
   event_date: string // ISO date
   km: number
   terrain: Terrain
+  lat: number | null
+  lng: number | null
   temp_avg_c: number | null
   humidity_pct: number | null
   elevation_gain_m: number | null
