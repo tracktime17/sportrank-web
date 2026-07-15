@@ -8,6 +8,8 @@ import { CircuitMapLoader } from '@/components/ui/CircuitMapLoader'
 import { RealPerformancePanel } from '@/components/eventos/RealPerformancePanel'
 import { DetailBack, DetailCtaRow } from './DetailActions'
 
+export const revalidate = 60
+
 const SAMPLE_REVIEWS = [
   { who: 'Camila R.', stars: 5, text: 'El clima y el circuito coincidieron con lo que predijo el score.' },
   { who: 'Matías V.', stars: 5, text: 'La organización estuvo a la altura del desafío. Repetiría sin dudar.' },

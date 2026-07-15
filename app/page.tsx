@@ -6,6 +6,8 @@ import { SportGrid } from '@/components/home/SportGrid'
 import { Rail } from '@/components/home/Rail'
 import type { Discipline, EventRow } from '@/lib/supabase/types'
 
+export const revalidate = 60
+
 function byDiscipline(events: EventRow[], discipline: Discipline) {
   return events.filter((e) => e.discipline === discipline).sort((a, b) => (b.pr_probability ?? 0) - (a.pr_probability ?? 0))
 }
