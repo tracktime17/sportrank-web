@@ -11,15 +11,17 @@ type FilterValue = 'Todos' | Discipline
 
 const OPTIONS: SegOption<FilterValue>[] = [
   { key: 'Todos', label: 'Todos' },
-  { key: 'Running', label: 'Running', icon: <RunIcon /> },
+  { key: 'Running', label: 'Running', icon: <RunIcon />, disabled: true },
   { key: 'Triatlón', label: 'Triatlón', icon: <TriIcon /> },
-  { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon /> },
+  { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon />, disabled: true },
 ]
+
+const SELECTABLE: FilterValue[] = OPTIONS.filter((o) => !o.disabled).map((o) => o.key)
 
 export function ExploreClient({ events }: { events: EventRow[] }) {
   const searchParams = useSearchParams()
   const initial = (searchParams.get('deporte') as FilterValue) ?? 'Todos'
-  const [filter, setFilter] = useState<FilterValue>(OPTIONS.some((o) => o.key === initial) ? initial : 'Todos')
+  const [filter, setFilter] = useState<FilterValue>(SELECTABLE.includes(initial) ? initial : 'Todos')
 
   const filtered = useMemo(
     () => (filter === 'Todos' ? events : events.filter((e) => e.discipline === filter)),

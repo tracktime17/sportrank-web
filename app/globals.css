@@ -669,6 +669,17 @@ input {
 .tile.active .t-hint {
   color: var(--accent);
 }
+.tile.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.tile.disabled:hover {
+  border-color: var(--border-soft);
+}
+.tile.disabled .t-hint {
+  color: var(--accent);
+  font-weight: 700;
+}
 
 .quiz-card {
   background: var(--surface-2);
@@ -839,6 +850,17 @@ input {
 }
 .seg button:not(.active):hover {
   color: var(--text);
+}
+.seg button.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.seg button.disabled:hover {
+  color: var(--text-2);
+}
+.seg button.disabled .hint {
+  color: var(--accent);
+  opacity: 1;
 }
 
 .climate-row {
@@ -1321,6 +1343,36 @@ input[type='range'].climate-input::-moz-range-thumb {
   transform: translateY(-4px);
   border-color: var(--accent);
   box-shadow: 0 24px 44px -20px rgba(0, 0, 0, 0.55);
+}
+.sport-vibe-card.is-soon {
+  cursor: default;
+  opacity: 0.75;
+}
+.sport-vibe-card.is-soon:hover {
+  transform: none;
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+.svc-soon {
+  position: relative;
+  z-index: 2;
+  margin-bottom: auto;
+}
+.svc-soon-badge {
+  display: inline-block;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  margin-bottom: 12px;
+}
+.svc-soon p {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12.5px;
+  line-height: 1.5;
+  max-width: 30ch;
 }
 .sport-vibe-card::after {
   content: '';

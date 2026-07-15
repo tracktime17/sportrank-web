@@ -1,9 +1,10 @@
 import { Suspense } from 'react'
 import { getEvents } from '@/lib/events-server'
+import { isLaunched } from '@/lib/events'
 import { ExploreClient } from './ExploreClient'
 
 export default async function ExplorePage() {
-  const events = await getEvents()
+  const events = (await getEvents()).filter((e) => isLaunched(e.discipline))
 
   return (
     <div className="wrap view-enter">

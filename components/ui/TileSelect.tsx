@@ -22,12 +22,13 @@ export function TileSelect<T extends string>({ options, value, onChange, classNa
         <button
           key={opt.key}
           type="button"
-          className={`tile ${opt.key === value ? 'active' : ''}`}
-          onClick={() => onChange(opt.key)}
+          className={`tile ${opt.key === value ? 'active' : ''} ${opt.disabled ? 'disabled' : ''}`}
+          onClick={() => !opt.disabled && onChange(opt.key)}
+          disabled={opt.disabled}
         >
           {opt.icon}
           <span className="t-label">{opt.label}</span>
-          {opt.hint && <span className="t-hint">{opt.hint}</span>}
+          {opt.disabled ? <span className="t-hint">Próximamente</span> : opt.hint && <span className="t-hint">{opt.hint}</span>}
         </button>
       ))}
     </div>

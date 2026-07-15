@@ -46,9 +46,9 @@ const GOALS: SegOption<MatchGoal>[] = [
 ]
 
 const SPORTS: SegOption<Discipline>[] = [
-  { key: 'Running', label: 'Running', icon: <RunIcon /> },
+  { key: 'Running', label: 'Running', icon: <RunIcon />, disabled: true },
   { key: 'Triatlón', label: 'Triatlón', icon: <TriIcon /> },
-  { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon /> },
+  { key: 'Ciclismo', label: 'Ciclismo', icon: <BikeIcon />, disabled: true },
 ]
 
 const TERRAIN_META: Record<Terrain, { icon: SegOption<Terrain>['icon'] }> = {
@@ -161,9 +161,9 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const revealRef = useRef<HTMLDivElement>(null)
   const [pref, setPref] = useState<MatchPreferences>({
     goal: 'Mejorar marca',
-    sport: 'Running',
-    distance: defaultDistanceFor('Running'),
-    terrain: defaultTerrainFor('Running'),
+    sport: 'Triatlón',
+    distance: defaultDistanceFor('Triatlón'),
+    terrain: defaultTerrainFor('Triatlón'),
     exigencia: 'Intermedio',
     climateIdeal: 16,
     elevationBucket: 'Ondulado',

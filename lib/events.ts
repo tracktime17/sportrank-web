@@ -5,6 +5,14 @@ import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain } from '@
 // (MatchConsole, EventCard, CompareTable la importan directo). Los fetchers
 // reales a la base de datos viven en lib/events-server.ts.
 
+// Lanzamiento inicial enfocado en triatlón — running y ciclismo se muestran
+// como "Próximamente" en toda la app hasta que se sumen más eventos reales.
+export const LAUNCHED_DISCIPLINES: Discipline[] = ['Triatlón']
+
+export function isLaunched(sport: Discipline): boolean {
+  return LAUNCHED_DISCIPLINES.includes(sport)
+}
+
 /* =========================================================
    MOTOR DE MATCH — primero el deporte (no se mezcla running
    con triatlón), luego 8 criterios dentro de esa disciplina:

@@ -8,6 +8,7 @@ export interface SegOption<T extends string> {
   hint?: string
   icon?: ReactNode
   bars?: number
+  disabled?: boolean
 }
 
 interface SegProps<T extends string> {
@@ -45,12 +46,13 @@ export function Seg<T extends string>({ options, value, onChange, className }: S
         <button
           key={opt.key}
           type="button"
-          className={opt.key === value ? 'active' : ''}
-          onClick={() => onChange(opt.key)}
+          className={`${opt.key === value ? 'active' : ''} ${opt.disabled ? 'disabled' : ''}`}
+          onClick={() => !opt.disabled && onChange(opt.key)}
+          disabled={opt.disabled}
         >
           {opt.icon}
           <span>{opt.label}</span>
-          {opt.hint && <span className="hint">{opt.hint}</span>}
+          {opt.disabled ? <span className="hint">Próximamente</span> : opt.hint && <span className="hint">{opt.hint}</span>}
         </button>
       ))}
     </div>

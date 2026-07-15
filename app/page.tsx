@@ -1,4 +1,5 @@
 import { getEvents } from '@/lib/events-server'
+import { isLaunched } from '@/lib/events'
 import { Hero } from '@/components/home/Hero'
 import { MatchConsole } from '@/components/match/MatchConsole'
 import { SportGrid } from '@/components/home/SportGrid'
@@ -17,17 +18,17 @@ function topByScore(events: EventRow[], discipline: Discipline) {
 
 export default async function Home() {
   const events = await getEvents()
-  const best = [...events].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
-  const avgCompat = events.length
-    ? Math.round(events.reduce((sum, e) => sum + (e.compatibility ?? 0), 0) / events.length)
+  const launchedEvents = events.filter((e) => isLaunched(e.discipline))
+
+  const best = [...launchedEvents].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
+  const avgCompat = launchedEvents.length
+    ? Math.round(launchedEvents.reduce((sum, e) => sum + (e.compatibility ?? 0), 0) / launchedEvents.length)
     : 0
 
-  const running = byDiscipline(events, 'Running')
-  const triatlon = byDiscipline(events, 'Triatlón')
-  const ciclismo = byDiscipline(events, 'Ciclismo')
+  const triatlon = byDiscipline(launchedEvents, 'Triatlón')
 
-  const topPerDiscipline = (['Running', 'Triatlón', 'Ciclismo'] as const)
-    .map((d) => topByScore(events, d))
+  const topPerDiscipline = (['Triatlón'] as const)
+    .map((d) => topByScore(launchedEvents, d))
     .filter((e): e is EventRow => Boolean(e))
   const heroMain = best ?? topPerDiscipline[0]
   const heroFeatured = heroMain
@@ -48,7 +49,7 @@ export default async function Home() {
       <Hero
         featured={heroFeatured}
         stats={{
-          totalEvents: events.length,
+          totalEvents: launchedEvents.length,
           disciplineCount: 3,
           bestScore: best?.score ?? 0,
           bestName: best?.name ?? '—',
@@ -70,17 +71,7 @@ export default async function Home() {
         <SportGrid events={events} />
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <div>
-            <h2>Running</h2>
-            <p>Ordenadas por probabilidad de PR dentro de running</p>
-          </div>
-        </div>
-        <Rail events={running} />
-      </section>
-
-      <section className="section">
+      <section className="section" style={{ paddingBottom: 24 }}>
         <div className="section-head">
           <div>
             <h2>Triatlón</h2>
@@ -88,16 +79,6 @@ export default async function Home() {
           </div>
         </div>
         <Rail events={triatlon} />
-      </section>
-
-      <section className="section" style={{ paddingBottom: 24 }}>
-        <div className="section-head">
-          <div>
-            <h2>Ciclismo</h2>
-            <p>Ordenadas por probabilidad de PR dentro de ciclismo</p>
-          </div>
-        </div>
-        <Rail events={ciclismo} />
       </section>
     </div>
   )
