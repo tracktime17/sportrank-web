@@ -97,6 +97,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
         )}
 
+        {event.stats_estimated && (
+          <div className="estimate-banner">
+            <span className="estimate-banner-icon">📊</span>
+            <p>
+              <b>Fecha, precio de inscripción y formato de distancia son datos confirmados</b> por la organización.
+              Clima, desnivel, cupos e indicadores de nivel de esta carrera todavía son{' '}
+              <b>estimaciones editoriales nuestras</b>, no datos oficiales confirmados — los actualizaremos apenas
+              tengamos la fuente real.
+            </p>
+          </div>
+        )}
+
         <div className="stat-grid8">
           <div className="stat-tile">
             <div className="stat-tile-icon">

@@ -51,6 +51,7 @@ export interface EventRow {
   lodging_max_clp: number
   kit_includes: string[] | null
   cutoff_pressure: CutoffPressure
+  stats_estimated: boolean
   is_published: boolean
   created_at: string
   updated_at: string
