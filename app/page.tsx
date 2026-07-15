@@ -2,7 +2,6 @@ import { getEvents } from '@/lib/events-server'
 import { isLaunched } from '@/lib/events'
 import { Hero } from '@/components/home/Hero'
 import { MatchConsole } from '@/components/match/MatchConsole'
-import { AIWaitlistCTA } from '@/components/match/AIWaitlistCTA'
 import { SportGrid } from '@/components/home/SportGrid'
 import { Rail } from '@/components/home/Rail'
 import type { Discipline, EventRow } from '@/lib/supabase/types'
@@ -60,7 +59,6 @@ export default async function Home() {
 
       <section className="section" id="match-section">
         <MatchConsole events={events} />
-        <AIWaitlistCTA />
       </section>
 
       <section className="section">

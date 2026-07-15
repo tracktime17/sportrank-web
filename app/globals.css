@@ -806,91 +806,156 @@ input {
   text-decoration: underline;
 }
 
-.ai-waitlist {
-  margin-top: 24px;
-  padding: 22px 26px;
+.match-tabs {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.match-tab {
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.match-tab:hover {
+  color: var(--text);
+}
+.match-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ai-panel {
+  position: relative;
+  min-height: 340px;
   border-radius: var(--r-lg);
   border: 1px solid var(--accent-tint-strong);
-  background: linear-gradient(135deg, var(--accent-tint), transparent 60%);
+  overflow: hidden;
+  background: var(--surface-2);
+  animation: quizStepIn 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
-.ai-waitlist-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--accent);
+.ai-panel-preview {
+  position: absolute;
+  inset: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  filter: blur(5px);
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+.ai-fake-bubble {
+  max-width: 70%;
+  padding: 11px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
   background: var(--surface);
-  border: 1px solid var(--accent-tint-strong);
-  border-radius: var(--r-pill);
-  padding: 5px 12px;
-  margin-bottom: 12px;
+  border: 1px solid var(--border-soft);
 }
-.ai-waitlist h3 {
-  font-size: 1.1rem;
+.ai-fake-bubble.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+.ai-panel-lock {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 28px;
+  background: linear-gradient(180deg, rgba(10, 10, 12, 0.35), rgba(10, 10, 12, 0.82));
+  backdrop-filter: blur(2px);
+}
+.ai-panel-icon {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+.ai-panel-lock h4 {
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   margin-bottom: 8px;
 }
-.ai-waitlist p {
+.ai-panel-lock p {
   color: var(--text-2);
   font-size: 13px;
   line-height: 1.55;
-  max-width: 62ch;
-  margin-bottom: 16px;
+  max-width: 42ch;
+  margin-bottom: 18px;
 }
-.ai-waitlist-form {
+.ai-panel-cta {
+  background: var(--accent);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 12px 26px;
+  border-radius: var(--r-pill);
+  transition: transform 0.15s ease;
+}
+.ai-panel-cta:hover {
+  transform: translateY(-1px);
+}
+.ai-panel-form {
   display: flex;
-  gap: 10px;
-  max-width: 420px;
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  animation: quizStepIn 0.25s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
-.ai-waitlist-form input {
+.ai-panel-form input {
   flex: 1;
   min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border-soft);
   border-radius: var(--r-pill);
   padding: 11px 16px;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text);
 }
-.ai-waitlist-form input:disabled {
+.ai-panel-form input:disabled {
   opacity: 0.6;
 }
-.ai-waitlist-form button {
+.ai-panel-form button {
   flex-shrink: 0;
   background: var(--accent);
   color: #fff;
   font-size: 13px;
   font-weight: 800;
-  padding: 11px 20px;
+  padding: 11px 18px;
   border-radius: var(--r-pill);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
-.ai-waitlist-form button:hover:not(:disabled) {
+.ai-panel-form button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
-.ai-waitlist-form button:disabled {
+.ai-panel-form button:disabled {
   opacity: 0.6;
   cursor: default;
 }
-.ai-waitlist-done {
+.ai-panel-done {
   color: var(--accent);
   font-size: 13.5px;
   font-weight: 700;
 }
-.ai-waitlist-error {
+.ai-panel-error {
   color: #ff6b6b;
   font-size: 12.5px;
-  margin-top: 8px;
-}
-@media (max-width: 520px) {
-  .ai-waitlist-form {
-    flex-direction: column;
-    max-width: none;
-  }
+  margin-top: 10px;
 }
 
 .seg {

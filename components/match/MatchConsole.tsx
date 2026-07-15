@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { TileSelect } from '@/components/ui/TileSelect'
 import type { SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
+import { AIMatchLockedPanel } from '@/components/match/AIMatchLockedPanel'
 import { useMatchPreferences } from '@/lib/store/useMatchPreferences'
 import {
   BarsIcon,
@@ -184,6 +185,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const { savePref } = useMatchPreferences()
   const [copied, setCopied] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
+  const [mode, setMode] = useState<'real' | 'ai'>('real')
   const [quizStep, setQuizStep] = useState(0)
   const [quizDone, setQuizDone] = useState(false)
   const [justRevealed, setJustRevealed] = useState(false)
@@ -427,7 +429,18 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           </div>
         </div>
 
-        {quizDone ? (
+        <div className="match-tabs">
+          <button type="button" className={`match-tab ${mode === 'real' ? 'active' : ''}`} onClick={() => setMode('real')}>
+            🎯 Match real
+          </button>
+          <button type="button" className={`match-tab ${mode === 'ai' ? 'active' : ''}`} onClick={() => setMode('ai')}>
+            ✨ Match con IA
+          </button>
+        </div>
+
+        {mode === 'ai' ? (
+          <AIMatchLockedPanel />
+        ) : quizDone ? (
           <div className="quiz-summary">
             <span className="clabel">Tu perfil</span>
             <div className="quiz-summary-chips">
