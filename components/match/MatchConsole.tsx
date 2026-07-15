@@ -34,11 +34,14 @@ import {
   defaultDistanceFor,
   TERRAIN_OPTIONS,
   defaultTerrainFor,
+  WATER_OPTIONS,
+  defaultWaterTypeFor,
   WEIGHT_PROFILES,
   type MatchGoal,
   type MatchPreferences,
+  type RaceSize,
 } from '@/lib/events'
-import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
+import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain, WaterType } from '@/lib/supabase/types'
 
 const GOALS: SegOption<MatchGoal>[] = [
   { key: 'Disfrutar', label: 'Disfrutar', icon: <span>🙂</span> },
@@ -88,13 +91,33 @@ const SEASONS: SegOption<MatchPreferences['season']>[] = [
   { key: 'Sin apuro', label: 'Sin apuro' },
 ]
 
+const WATER_META: Record<WaterType, string> = {
+  Mar: '🌊',
+  Lago: '🏞️',
+  Río: '🌉',
+  Laguna: '💧',
+}
+const WATERS: SegOption<WaterType>[] = WATER_OPTIONS.map((w) => ({ key: w, label: w, icon: <span>{WATER_META[w]}</span> }))
+
+const RACE_SIZE_META: Record<RaceSize, { icon: string; hint: string }> = {
+  Íntima: { icon: '🤏', hint: '<500' },
+  Mediana: { icon: '👥', hint: '500–5.000' },
+  Masiva: { icon: '🎉', hint: '5.000+' },
+}
+const RACE_SIZES: SegOption<RaceSize>[] = (['Íntima', 'Mediana', 'Masiva'] as RaceSize[]).map((s) => ({
+  key: s,
+  label: s,
+  hint: RACE_SIZE_META[s].hint,
+  icon: <span>{RACE_SIZE_META[s].icon}</span>,
+}))
+
 const SPORT_META: Record<Discipline, { noun: string; verb: string; genderSuffix: 'a' | 'o' }> = {
   Running: { noun: 'carrera', verb: 'correr', genderSuffix: 'a' },
   Triatlón: { noun: 'triatlón', verb: 'competir', genderSuffix: 'o' },
   Ciclismo: { noun: 'fondo', verb: 'pedalear', genderSuffix: 'o' },
 }
 
-const TOTAL_STEPS = 7
+const TOTAL_STEPS = 8
 
 function questionFor(step: number, sport: Discipline, hasTerrainChoice: boolean): { q: string; sub?: string } {
   const meta = SPORT_META[sport]
@@ -117,6 +140,11 @@ function questionFor(step: number, sport: Discipline, hasTerrainChoice: boolean)
     case 5:
       return { q: '¿Qué tan ajustado quieres el tiempo de corte, y para cuándo?' }
     case 6:
+      return {
+        q: '¿Dónde prefieres nadar, y qué tan masiva quieres tu carrera?',
+        sub: 'El nado es lo que más ansiedad genera al elegir triatlón — no es lo mismo mar abierto que un lago tranquilo.',
+      }
+    case 7:
       return {
         q: '¿Cuál es tu clima ideal para rendir al máximo?',
         sub: 'Usamos la sensación térmica real de cada carrera, no solo la temperatura.',
@@ -172,6 +200,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     costBucket: 'Medio',
     cutoffPressure: 'Moderado',
     season: 'Este semestre',
+    waterType: defaultWaterTypeFor(),
+    raceSize: 'Mediana',
   })
 
   useEffect(() => () => {
@@ -307,6 +337,29 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
           ? `Coincide con lo que buscabas: ${pref.season.toLowerCase()}`
           : `Es en ${new Date(top.event.event_date).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}, buscabas algo "${pref.season.toLowerCase()}"`,
     },
+    {
+      label: 'Tipo de agua',
+      weight: weights.water,
+      earned: top.waterOk ? 1 : 0,
+      icon: <span>{top.event.water_type ? WATER_META[top.event.water_type] : '💧'}</span>,
+      short: top.event.water_type ?? 'Sin dato',
+      detail: top.event.water_type
+        ? top.waterOk
+          ? `Coincide: nado en ${top.event.water_type.toLowerCase()}`
+          : `Es ${top.event.water_type.toLowerCase()}, buscabas ${pref.waterType.toLowerCase()}`
+        : 'Todavía no tenemos el tipo de agua de esta carrera',
+    },
+    {
+      label: 'Ambiente',
+      weight: weights.raceSize,
+      earned: top.raceSizeFrac,
+      icon: <span>{RACE_SIZE_META[top.eventRaceSize].icon}</span>,
+      short: `${top.eventRaceSize} · ${top.event.entrants ?? '?'} inscritos`,
+      detail:
+        top.raceSizeFrac === 1
+          ? `Coincide: carrera ${top.eventRaceSize.toLowerCase()}`
+          : `Es ${top.eventRaceSize.toLowerCase()}, buscabas algo ${pref.raceSize.toLowerCase()}`,
+    },
   ]
 
   const tier = (frac: number) => (frac >= 0.75 ? 'good' : frac >= 0.4 ? 'warn' : 'bad')
@@ -334,6 +387,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     pref.costBucket,
     pref.cutoffPressure,
     pref.season,
+    pref.waterType,
+    pref.raceSize,
     `${pref.climateIdeal}°C ideal`,
   ]
 
@@ -480,6 +535,19 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
               )}
 
               {quizStep === 6 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Tipo de agua</span>
+                    <TileSelect options={WATERS} value={pref.waterType} onChange={(waterType) => setPref((p) => ({ ...p, waterType }))} />
+                  </div>
+                  <div>
+                    <span className="clabel">Ambiente</span>
+                    <TileSelect options={RACE_SIZES} value={pref.raceSize} onChange={(raceSize) => setPref((p) => ({ ...p, raceSize }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 7 && (
                 <div className="rail-block" style={{ marginBottom: 0 }}>
                   <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
                 </div>
@@ -495,12 +563,12 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
                 ) : (
                   <span />
                 )}
-                {quizStep >= 3 && quizStep <= 5 && (
+                {quizStep >= 3 && quizStep <= 6 && (
                   <button type="button" className="quiz-continue" onClick={() => setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1))}>
                     Continuar
                   </button>
                 )}
-                {quizStep === 6 && (
+                {quizStep === 7 && (
                   <button type="button" className="quiz-continue" onClick={handleFinish}>
                     Ver mi match →
                   </button>

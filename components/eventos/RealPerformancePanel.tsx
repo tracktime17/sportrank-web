@@ -121,6 +121,25 @@ export function RealPerformancePanel({ event }: { event: EventRow }) {
           ? `Coincide con lo que buscabas: ${pref.season.toLowerCase()}`
           : `Buscabas algo "${pref.season.toLowerCase()}"`,
     },
+    {
+      label: 'Tipo de agua',
+      earned: result.waterOk ? 1 : 0,
+      icon: <WaveIcon />,
+      detail: event.water_type
+        ? result.waterOk
+          ? `Coincide: nado en ${event.water_type.toLowerCase()}`
+          : `Es ${event.water_type.toLowerCase()}, buscabas ${pref.waterType.toLowerCase()}`
+        : 'Todavía no tenemos el tipo de agua de esta carrera',
+    },
+    {
+      label: 'Ambiente',
+      earned: result.raceSizeFrac,
+      icon: <BarsIcon active={2} />,
+      detail:
+        result.raceSizeFrac === 1
+          ? `Coincide: carrera ${result.eventRaceSize.toLowerCase()}`
+          : `Es ${result.eventRaceSize.toLowerCase()}, buscabas algo ${pref.raceSize.toLowerCase()}`,
+    },
   ]
 
   return (
@@ -135,7 +154,7 @@ export function RealPerformancePanel({ event }: { event: EventRow }) {
         <p className="perf-basis">
           Objetivo: <b>{pref.goal}</b> · Pesos usados: distancia {weights.distance}, terreno {weights.terrain}, clima{' '}
           {weights.climate}, exigencia {weights.level}, desnivel {weights.elevation}, costo {weights.cost}, corte{' '}
-          {weights.cutoff}, temporada {weights.season}
+          {weights.cutoff}, temporada {weights.season}, agua {weights.water}, ambiente {weights.raceSize}
         </p>
         <div className="perf-rows">
           {rows.map((r) => {

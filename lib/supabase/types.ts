@@ -6,6 +6,7 @@ export type Discipline = 'Running' | 'Triatlón' | 'Ciclismo'
 export type Terrain = 'Urbano' | 'Montaña' | 'Agua'
 export type Exigencia = 'Principiante' | 'Intermedio' | 'Avanzado'
 export type CutoffPressure = 'Generoso' | 'Moderado' | 'Estricto'
+export type WaterType = 'Mar' | 'Lago' | 'Río' | 'Laguna'
 
 export interface EventRow {
   id: string
@@ -17,6 +18,7 @@ export interface EventRow {
   event_date: string // ISO date
   km: number
   terrain: Terrain
+  water_type: WaterType | null
   lat: number | null
   lng: number | null
   temp_avg_c: number | null

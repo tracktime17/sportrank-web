@@ -1,4 +1,4 @@
-import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain } from '@/lib/supabase/types'
+import type { CutoffPressure, Discipline, EventRow, Exigencia, Terrain, WaterType } from '@/lib/supabase/types'
 
 // Funciones puras, sin ningún import de Supabase server / next/headers.
 // Se pueden usar tanto desde Server Components como desde Client Components
@@ -15,9 +15,10 @@ export function isLaunched(sport: Discipline): boolean {
 
 /* =========================================================
    MOTOR DE MATCH — primero el deporte (no se mezcla running
-   con triatlón), luego 8 criterios dentro de esa disciplina:
+   con triatlón), luego 10 criterios dentro de esa disciplina:
    distancia, terreno, clima (sensación térmica), exigencia,
-   desnivel, costo, presión del tiempo de corte y temporada.
+   desnivel, costo, presión del tiempo de corte, temporada,
+   tipo de agua (nado) y tamaño/ambiente de la carrera.
 
    El PESO de cada criterio depende del objetivo que elige el
    usuario (disfrutar / mejorar marca / competir) — no es el
@@ -30,21 +31,39 @@ export function isLaunched(sport: Discipline): boolean {
    corredor es apenas ondulado para un ciclista) — por eso cada
    deporte tiene su propio vocabulario y sus propios umbrales en
    vez de un solo bucket genérico aplicado a los 3 por igual.
+
+   Tipo de agua y tamaño de carrera son específicos de triatlón:
+   el nado es lo que más ansiedad genera al elegir carrera (mar
+   abierto con oleaje no es lo mismo que un lago tranquilo o un
+   río con corriente), y el tamaño real de la carrera (inscritos)
+   define si se siente como una fiesta masiva o algo íntimo.
 ========================================================= */
 export type MatchGoal = 'Disfrutar' | 'Mejorar marca' | 'Competir'
 
 export const WEIGHT_PROFILES: Record<
   MatchGoal,
-  { distance: number; terrain: number; climate: number; level: number; elevation: number; cost: number; cutoff: number; season: number }
+  {
+    distance: number
+    terrain: number
+    climate: number
+    level: number
+    elevation: number
+    cost: number
+    cutoff: number
+    season: number
+    water: number
+    raceSize: number
+  }
 > = {
-  Disfrutar: { climate: 18, cost: 16, cutoff: 16, terrain: 12, distance: 12, elevation: 8, level: 8, season: 10 },
-  'Mejorar marca': { climate: 18, elevation: 16, distance: 16, terrain: 12, level: 12, cost: 10, cutoff: 8, season: 8 },
-  Competir: { level: 22, distance: 16, terrain: 14, elevation: 12, climate: 10, cost: 8, cutoff: 6, season: 12 },
+  Disfrutar: { climate: 14, cost: 13, cutoff: 13, terrain: 9, distance: 9, elevation: 6, level: 6, season: 7, water: 13, raceSize: 10 },
+  'Mejorar marca': { climate: 14, elevation: 13, distance: 13, terrain: 9, level: 10, cost: 8, cutoff: 6, season: 7, water: 11, raceSize: 9 },
+  Competir: { level: 18, distance: 13, terrain: 11, elevation: 10, climate: 8, cost: 6, cutoff: 5, season: 9, water: 10, raceSize: 10 },
 }
 
 export type ElevationBucket = 'Llano' | 'Ondulado' | 'Montañoso'
 export type CostBucket = 'Bajo' | 'Medio' | 'Alto'
 export type Season = 'Próximo mes' | 'Este semestre' | 'Sin apuro'
+export type RaceSize = 'Íntima' | 'Mediana' | 'Masiva'
 
 export interface MatchPreferences {
   goal: MatchGoal
@@ -57,6 +76,8 @@ export interface MatchPreferences {
   costBucket: CostBucket
   cutoffPressure: CutoffPressure
   season: Season
+  waterType: WaterType
+  raceSize: RaceSize
 }
 
 const STEP_FRAC_4 = [1, 0.55, 0.2, 0] // 0, 1, 2, 3 escalones de distancia
@@ -68,6 +89,18 @@ const CUTOFF_ORDER: CutoffPressure[] = ['Generoso', 'Moderado', 'Estricto']
 const CUTOFF_STEP_FRAC = [1, 0.45, 0]
 const SEASON_ORDER: Season[] = ['Próximo mes', 'Este semestre', 'Sin apuro']
 const SEASON_STEP_FRAC = [1, 0.5, 0.15]
+const RACE_SIZE_ORDER: RaceSize[] = ['Íntima', 'Mediana', 'Masiva']
+const RACE_SIZE_STEP_FRAC = [1, 0.4, 0]
+
+/** Tamaño real de la carrera según inscritos — no hay dato "oficial" de qué
+ * es masivo o íntimo, así que usamos umbrales consistentes con el rango
+ * real de eventos que ya tenemos (de 100 cupos boutique a 35.000 corredores). */
+export function raceSizeBucket(entrants: number | null): RaceSize {
+  if (entrants === null) return 'Íntima'
+  if (entrants < 500) return 'Íntima'
+  if (entrants < 5000) return 'Mediana'
+  return 'Masiva'
+}
 
 function stepFrac<T>(order: T[], steps: number[], a: T, b: T) {
   const diff = Math.abs(order.indexOf(a) - order.indexOf(b))
@@ -218,6 +251,9 @@ export interface MatchResult {
   costFrac: number
   cutoffFrac: number
   seasonFrac: number
+  waterOk: boolean
+  raceSizeFrac: number
+  eventRaceSize: RaceSize
   feelsLike: number
 }
 
@@ -235,6 +271,15 @@ export const TERRAIN_OPTIONS: Record<Discipline, Terrain[]> = {
 
 export function defaultTerrainFor(sport: Discipline): Terrain {
   return TERRAIN_OPTIONS[sport][0]
+}
+
+/** El tipo de agua solo aplica a triatlón — nadar es la parte que más
+ * ansiedad genera al elegir carrera, y no es lo mismo mar abierto con
+ * oleaje que un lago tranquilo, un río con corriente o una laguna. */
+export const WATER_OPTIONS: WaterType[] = ['Mar', 'Lago', 'Río', 'Laguna']
+
+export function defaultWaterTypeFor(): WaterType {
+  return WATER_OPTIONS[0]
 }
 
 export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchResult[] {
@@ -265,6 +310,9 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
       )
       const cutoffFrac = stepFrac(CUTOFF_ORDER, CUTOFF_STEP_FRAC, e.cutoff_pressure, pref.cutoffPressure)
       const seasonFrac = stepFrac(SEASON_ORDER, SEASON_STEP_FRAC, seasonBucket(e.event_date), pref.season)
+      const waterOk = e.water_type === null ? true : e.water_type === pref.waterType
+      const eventRaceSize = raceSizeBucket(e.entrants)
+      const raceSizeFrac = stepFrac(RACE_SIZE_ORDER, RACE_SIZE_STEP_FRAC, eventRaceSize, pref.raceSize)
 
       const raw =
         distFrac * weights.distance +
@@ -274,7 +322,9 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
         elevationFrac * weights.elevation +
         costFrac * weights.cost +
         cutoffFrac * weights.cutoff +
-        seasonFrac * weights.season
+        seasonFrac * weights.season +
+        (waterOk ? weights.water : 0) +
+        raceSizeFrac * weights.raceSize
 
       return {
         event: e,
@@ -287,6 +337,9 @@ export function computeMatch(events: EventRow[], pref: MatchPreferences): MatchR
         costFrac,
         cutoffFrac,
         seasonFrac,
+        waterOk,
+        raceSizeFrac,
+        eventRaceSize,
         feelsLike,
       }
     })
