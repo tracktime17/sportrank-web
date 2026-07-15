@@ -154,60 +154,6 @@ function questionFor(step: number, sport: Discipline, hasTerrainChoice: boolean)
   }
 }
 
-function answerSummaryFor(step: number, pref: MatchPreferences, hasTerrainChoice: boolean): string {
-  switch (step) {
-    case 0:
-      return pref.sport
-    case 1:
-      return pref.goal
-    case 2:
-      return pref.distance
-    case 3:
-      return hasTerrainChoice ? `${pref.terrain} · ${pref.exigencia}` : pref.exigencia
-    case 4:
-      return `${pref.elevationBucket} · ${pref.costBucket}`
-    case 5:
-      return `${pref.cutoffPressure} · ${pref.season}`
-    case 6:
-      return `${pref.waterType} · ${pref.raceSize}`
-    case 7:
-      return `${pref.climateIdeal}°C`
-    default:
-      return ''
-  }
-}
-
-const GOAL_REACTIONS: Record<MatchGoal, string> = {
-  Disfrutar: 'Disfrutar la experiencia, me encanta esa mentalidad 🙂',
-  'Mejorar marca': '¡Directo a tu mejor marca! Reordeno el algoritmo para eso 📈',
-  Competir: 'Modo competitivo activado 🏁',
-}
-
-function reactionFor(step: number, pref: MatchPreferences): string | null {
-  switch (step) {
-    case 0:
-      return `¡${pref.sport}! Vamos a encontrar tu carrera ideal.`
-    case 1:
-      return GOAL_REACTIONS[pref.goal]
-    case 2:
-      return `Anotado: ${pref.distance}.`
-    case 3:
-      return 'Perfecto, ya sé qué tan exigente lo quieres.'
-    case 4:
-      return 'Listo, tomo nota del desnivel y el presupuesto.'
-    case 5:
-      return 'Entendido — nada de sorpresas de última hora.'
-    case 6:
-      return pref.waterType === 'Mar'
-        ? '¿Mar abierto? Se nota que no le tienes miedo al oleaje 🌊'
-        : `${pref.waterType}, buena elección para nadar tranquilo.`
-    case 7:
-      return `${pref.climateIdeal}°C, directo al Performance Score.`
-    default:
-      return null
-  }
-}
-
 function useAnimatedNumber(target: number, duration = 650) {
   const [value, setValue] = useState(target)
   const fromRef = useRef(target)
@@ -240,11 +186,9 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   const [showDetail, setShowDetail] = useState(false)
   const [quizStep, setQuizStep] = useState(0)
   const [quizDone, setQuizDone] = useState(false)
-  const [typingNext, setTypingNext] = useState(false)
   const [justRevealed, setJustRevealed] = useState(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const revealRef = useRef<HTMLDivElement>(null)
-  const chatLogRef = useRef<HTMLDivElement>(null)
   const [pref, setPref] = useState<MatchPreferences>({
     goal: 'Mejorar marca',
     sport: 'Triatlón',
@@ -264,43 +208,20 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
   }, [])
 
-  useEffect(() => {
-    chatLogRef.current?.scrollTo({ top: chatLogRef.current.scrollHeight, behavior: 'smooth' })
-  }, [quizStep, typingNext])
-
-  function goNext() {
-    setTypingNext(true)
-    if (advanceTimer.current) clearTimeout(advanceTimer.current)
-    advanceTimer.current = setTimeout(() => {
-      setTypingNext(false)
-      setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1))
-    }, 550)
-  }
-
   function selectAndAdvance(update: (p: MatchPreferences) => MatchPreferences) {
     setPref(update)
-    goNext()
-  }
-
-  function goBack() {
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
-    setTypingNext(false)
-    setQuizStep((s) => Math.max(0, s - 1))
+    advanceTimer.current = setTimeout(() => setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1)), 320)
   }
 
   function handleFinish() {
-    setTypingNext(true)
-    if (advanceTimer.current) clearTimeout(advanceTimer.current)
-    advanceTimer.current = setTimeout(() => {
-      setTypingNext(false)
-      setQuizDone(true)
-      setJustRevealed(true)
-      savePref(pref)
-      setTimeout(() => setJustRevealed(false), 1200)
-      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-        setTimeout(() => revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
-      }
-    }, 550)
+    setQuizDone(true)
+    setJustRevealed(true)
+    savePref(pref)
+    setTimeout(() => setJustRevealed(false), 1200)
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setTimeout(() => revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    }
   }
 
   const ranked = useMemo(() => computeMatch(events, pref), [events, pref])
@@ -454,6 +375,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
       ? `Los ${breakdown.length} criterios calzan casi perfecto con tu perfil.`
       : `${strongCount} de ${breakdown.length} criterios calzan perfecto. En ${weakest.label.toLowerCase()}: ${weakest.detail}.`
 
+  const { q: question, sub: questionSub } = questionFor(quizStep, pref.sport, hasTerrainChoice)
 
   const summaryChips = [
     pref.sport,
@@ -527,7 +449,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
             </button>
           </div>
         ) : (
-          <div className="chat-card">
+          <div className="quiz-card">
             <div className="quiz-progress">
               {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                 <div key={i} className={`quiz-seg ${i < quizStep ? 'done' : i === quizStep ? 'current' : ''}`} />
@@ -537,169 +459,116 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
               Pregunta {quizStep + 1} de {TOTAL_STEPS}
             </div>
 
-            <div className="chat-log" ref={chatLogRef}>
-              {Array.from({ length: quizStep + 1 }).map((_, i) => {
-                const q = questionFor(i, pref.sport, hasTerrainChoice)
-                const answered = i < quizStep || (i === quizStep && typingNext)
-                const reaction = answered ? reactionFor(i, pref) : null
-                return (
-                  <div className="chat-turn" key={i}>
-                    <div className="chat-row bot">
-                      <div className="chat-avatar">
-                        <svg viewBox="0 0 28 28">
-                          <rect width="28" height="28" rx="8" fill="#2f9bff" />
-                          <path d="M10 8l5 6-5 6" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                      <div className="chat-bubble bot">
-                        <p className="chat-q">{q.q}</p>
-                        {q.sub && <p className="chat-sub">{q.sub}</p>}
-                      </div>
+            <div className="quiz-body" key={quizStep}>
+              <h4 className="quiz-question">{question}</h4>
+              {questionSub && <p className="quiz-sub">{questionSub}</p>}
+
+              {quizStep === 0 && (
+                <TileSelect
+                  options={SPORTS}
+                  value={pref.sport}
+                  onChange={(sport) =>
+                    selectAndAdvance((p) => ({ ...p, sport, distance: defaultDistanceFor(sport), terrain: defaultTerrainFor(sport) }))
+                  }
+                />
+              )}
+
+              {quizStep === 1 && (
+                <TileSelect options={GOALS} value={pref.goal} onChange={(goal) => selectAndAdvance((p) => ({ ...p, goal }))} />
+              )}
+
+              {quizStep === 2 && (
+                <TileSelect
+                  options={DISTANCE_OPTIONS[pref.sport]}
+                  value={pref.distance}
+                  onChange={(distance) => selectAndAdvance((p) => ({ ...p, distance }))}
+                />
+              )}
+
+              {quizStep === 3 && (
+                <div className={hasTerrainChoice ? 'rail-pair' : 'rail-block'}>
+                  {hasTerrainChoice && (
+                    <div>
+                      <span className="clabel">Terreno</span>
+                      <TileSelect options={terrainOptions} value={pref.terrain} onChange={(terrain) => setPref((p) => ({ ...p, terrain }))} />
                     </div>
-
-                    {answered && (
-                      <div className="chat-row user">
-                        <div className="chat-bubble user">{answerSummaryFor(i, pref, hasTerrainChoice)}</div>
-                      </div>
-                    )}
-
-                    {reaction && (
-                      <div className="chat-row bot">
-                        <div className="chat-avatar chat-avatar-ghost" />
-                        <div className="chat-bubble bot reaction">{reaction}</div>
-                      </div>
-                    )}
-
-                    {i === quizStep && !answered && (
-                      <div className="chat-input">
-                        {i === 0 && (
-                          <TileSelect
-                            options={SPORTS}
-                            value={pref.sport}
-                            onChange={(sport) =>
-                              selectAndAdvance((p) => ({ ...p, sport, distance: defaultDistanceFor(sport), terrain: defaultTerrainFor(sport) }))
-                            }
-                          />
-                        )}
-                        {i === 1 && (
-                          <TileSelect options={GOALS} value={pref.goal} onChange={(goal) => selectAndAdvance((p) => ({ ...p, goal }))} />
-                        )}
-                        {i === 2 && (
-                          <TileSelect
-                            options={DISTANCE_OPTIONS[pref.sport]}
-                            value={pref.distance}
-                            onChange={(distance) => selectAndAdvance((p) => ({ ...p, distance }))}
-                          />
-                        )}
-                        {i === 3 && (
-                          <div className={hasTerrainChoice ? 'rail-pair' : 'rail-block'}>
-                            {hasTerrainChoice && (
-                              <div>
-                                <span className="clabel">Terreno</span>
-                                <TileSelect
-                                  options={terrainOptions}
-                                  value={pref.terrain}
-                                  onChange={(terrain) => setPref((p) => ({ ...p, terrain }))}
-                                />
-                              </div>
-                            )}
-                            <div>
-                              <span className="clabel">Exigencia</span>
-                              <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
-                            </div>
-                          </div>
-                        )}
-                        {i === 4 && (
-                          <div className="rail-pair">
-                            <div>
-                              <span className="clabel">Desnivel</span>
-                              <TileSelect
-                                options={ELEVATIONS}
-                                value={pref.elevationBucket}
-                                onChange={(elevationBucket) => setPref((p) => ({ ...p, elevationBucket }))}
-                              />
-                            </div>
-                            <div>
-                              <span className="clabel">Costo</span>
-                              <TileSelect
-                                options={BUDGETS}
-                                value={pref.costBucket}
-                                onChange={(costBucket) => setPref((p) => ({ ...p, costBucket }))}
-                              />
-                            </div>
-                          </div>
-                        )}
-                        {i === 5 && (
-                          <div className="rail-pair">
-                            <div>
-                              <span className="clabel">Tiempo de corte</span>
-                              <TileSelect
-                                options={CUTOFFS}
-                                value={pref.cutoffPressure}
-                                onChange={(cutoffPressure) => setPref((p) => ({ ...p, cutoffPressure }))}
-                              />
-                            </div>
-                            <div>
-                              <span className="clabel">¿Cuándo?</span>
-                              <TileSelect options={SEASONS} value={pref.season} onChange={(season) => setPref((p) => ({ ...p, season }))} />
-                            </div>
-                          </div>
-                        )}
-                        {i === 6 && (
-                          <div className="rail-pair">
-                            <div>
-                              <span className="clabel">Tipo de agua</span>
-                              <TileSelect options={WATERS} value={pref.waterType} onChange={(waterType) => setPref((p) => ({ ...p, waterType }))} />
-                            </div>
-                            <div>
-                              <span className="clabel">Ambiente</span>
-                              <TileSelect options={RACE_SIZES} value={pref.raceSize} onChange={(raceSize) => setPref((p) => ({ ...p, raceSize }))} />
-                            </div>
-                          </div>
-                        )}
-                        {i === 7 && (
-                          <div className="rail-block" style={{ marginBottom: 0 }}>
-                            <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  )}
+                  <div>
+                    <span className="clabel">Exigencia</span>
+                    <TileSelect options={LEVELS} value={pref.exigencia} onChange={(exigencia) => setPref((p) => ({ ...p, exigencia }))} />
                   </div>
-                )
-              })}
+                </div>
+              )}
 
-              {typingNext && (
-                <div className="chat-row bot">
-                  <div className="chat-avatar">
-                    <svg viewBox="0 0 28 28">
-                      <rect width="28" height="28" rx="8" fill="#2f9bff" />
-                      <path d="M10 8l5 6-5 6" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+              {quizStep === 4 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Desnivel</span>
+                    <TileSelect
+                      options={ELEVATIONS}
+                      value={pref.elevationBucket}
+                      onChange={(elevationBucket) => setPref((p) => ({ ...p, elevationBucket }))}
+                    />
                   </div>
-                  <div className="chat-bubble bot typing">
-                    <span className="chat-dot" />
-                    <span className="chat-dot" />
-                    <span className="chat-dot" />
+                  <div>
+                    <span className="clabel">Costo</span>
+                    <TileSelect options={BUDGETS} value={pref.costBucket} onChange={(costBucket) => setPref((p) => ({ ...p, costBucket }))} />
                   </div>
+                </div>
+              )}
+
+              {quizStep === 5 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Tiempo de corte</span>
+                    <TileSelect
+                      options={CUTOFFS}
+                      value={pref.cutoffPressure}
+                      onChange={(cutoffPressure) => setPref((p) => ({ ...p, cutoffPressure }))}
+                    />
+                  </div>
+                  <div>
+                    <span className="clabel">¿Cuándo?</span>
+                    <TileSelect options={SEASONS} value={pref.season} onChange={(season) => setPref((p) => ({ ...p, season }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 6 && (
+                <div className="rail-pair">
+                  <div>
+                    <span className="clabel">Tipo de agua</span>
+                    <TileSelect options={WATERS} value={pref.waterType} onChange={(waterType) => setPref((p) => ({ ...p, waterType }))} />
+                  </div>
+                  <div>
+                    <span className="clabel">Ambiente</span>
+                    <TileSelect options={RACE_SIZES} value={pref.raceSize} onChange={(raceSize) => setPref((p) => ({ ...p, raceSize }))} />
+                  </div>
+                </div>
+              )}
+
+              {quizStep === 7 && (
+                <div className="rail-block" style={{ marginBottom: 0 }}>
+                  <ClimateSlider value={pref.climateIdeal} onChange={(climateIdeal) => setPref((p) => ({ ...p, climateIdeal }))} />
                 </div>
               )}
             </div>
 
-            {(quizStep > 0 || (quizStep >= 3 && !typingNext)) && (
+            {(quizStep > 0 || quizStep >= 3) && (
               <div className="quiz-nav">
                 {quizStep > 0 ? (
-                  <button type="button" className="quiz-back" onClick={goBack}>
+                  <button type="button" className="quiz-back" onClick={() => setQuizStep((s) => Math.max(0, s - 1))}>
                     <BackIcon /> Atrás
                   </button>
                 ) : (
                   <span />
                 )}
-                {quizStep >= 3 && quizStep <= 6 && !typingNext && (
-                  <button type="button" className="quiz-continue" onClick={goNext}>
+                {quizStep >= 3 && quizStep <= 6 && (
+                  <button type="button" className="quiz-continue" onClick={() => setQuizStep((s) => Math.min(s + 1, TOTAL_STEPS - 1))}>
                     Continuar
                   </button>
                 )}
-                {quizStep === 7 && !typingNext && (
+                {quizStep === 7 && (
                   <button type="button" className="quiz-continue" onClick={handleFinish}>
                     Ver mi match →
                   </button>
