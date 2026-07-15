@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { TileSelect } from '@/components/ui/TileSelect'
 import type { SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
+import { useMatchPreferences } from '@/lib/store/useMatchPreferences'
 import {
   BarsIcon,
   RunIcon,
@@ -152,6 +153,7 @@ function useAnimatedNumber(target: number, duration = 650) {
 
 export function MatchConsole({ events }: { events: EventRow[] }) {
   const router = useRouter()
+  const { savePref } = useMatchPreferences()
   const [copied, setCopied] = useState(false)
   const [showDetail, setShowDetail] = useState(false)
   const [quizStep, setQuizStep] = useState(0)
@@ -185,6 +187,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
   function handleFinish() {
     setQuizDone(true)
     setJustRevealed(true)
+    savePref(pref)
     setTimeout(() => setJustRevealed(false), 1200)
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setTimeout(() => revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)

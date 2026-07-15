@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
 import { getEventBySlug, getEvents } from '@/lib/events-server'
-import { costRange, fmtCLP, costLabel, feelsLikeC } from '@/lib/events'
-import { Ring } from '@/components/ui/Ring'
+import { costRange, fmtCLP, costLabel, feelsLikeC, triLegsFor, cutoffInfoFor } from '@/lib/events'
 import { ElevationChart } from '@/components/ui/ElevationChart'
-import { CheckIcon, ThermoIcon, WaveIcon, MountainIcon, TrendUpIcon, UsersIcon, CoinIcon, ClockIcon, StarIcon } from '@/components/ui/Icons'
+import { CheckIcon, ThermoIcon, WaveIcon, MountainIcon, UsersIcon, CoinIcon, ClockIcon, StarIcon } from '@/components/ui/Icons'
 import { EventCard } from '@/components/ui/EventCard'
 import { CircuitMapLoader } from '@/components/ui/CircuitMapLoader'
+import { RealPerformancePanel } from '@/components/eventos/RealPerformancePanel'
 import { DetailBack, DetailCtaRow } from './DetailActions'
 
 const SAMPLE_REVIEWS = [
@@ -38,17 +38,6 @@ function daysUntilLabel(eventDateISO: string) {
   return `Faltan ${days} días`
 }
 
-function scoreTier(score: number): 'good' | 'warn' | 'bad' {
-  const frac = score / 100
-  return frac >= 0.75 ? 'good' : frac >= 0.4 ? 'warn' : 'bad'
-}
-
-const PERF_TAGLINE: Record<'good' | 'warn' | 'bad', string> = {
-  good: '🔥 Este es tu momento — todo apunta a tu mejor marca.',
-  warn: '💪 Buenas condiciones. Con la preparación correcta, puedes destacar acá.',
-  bad: '🧭 No es tu match ideal, pero puede ser un lindo desafío.',
-}
-
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const event = await getEventBySlug(slug).catch(() => null)
@@ -68,8 +57,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   })
   const countdown = daysUntilLabel(event.event_date)
   const feelsLike = feelsLikeC(event.temp_avg_c ?? 20, event.humidity_pct ?? 50)
-  const climbIntensity = event.km > 0 ? Math.round((event.elevation_gain_m ?? 0) / event.km) : 0
-  const tier = scoreTier(event.score ?? 0)
+  const legs = triLegsFor(event.distances)
+  const cutoff = cutoffInfoFor(event.distances)
 
   return (
     <div className="view-enter">
@@ -139,15 +128,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
           <div className="stat-tile">
             <div className="stat-tile-icon">
-              <TrendUpIcon />
-            </div>
-            <div>
-              <div className="stat-tile-val">{climbIntensity}m/km</div>
-            </div>
-            <div className="stat-tile-lbl">Intensidad</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-tile-icon">
               <UsersIcon />
             </div>
             <div>
@@ -169,7 +149,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <ClockIcon />
             </div>
             <div>
-              <div className="stat-tile-val">{event.cutoff_pressure}</div>
+              <div className="stat-tile-val">{cutoff?.label ?? event.cutoff_pressure}</div>
+              {cutoff && <span className="stat-tile-sub">Tiempo límite total</span>}
             </div>
             <div className="stat-tile-lbl">Tiempo de corte</div>
           </div>
@@ -184,42 +165,39 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
         </div>
 
-        <div className="perf-panel">
-          <div>
-            <Ring score={event.score ?? 0} size={150} stroke={12} fontSize={38} />
-            <div className="ring-lbl">Performance Score</div>
-            <div className={`perf-tagline tone-${tier}`}>{PERF_TAGLINE[tier]}</div>
-          </div>
-          <div>
-            <h3>
-              Estás en el <span>{event.position_label}</span> de carreras donde más opciones tienes de lograr tu
-              mejor marca
-            </h3>
-            <div className="perf-metrics">
-              <div className="metric">
-                <div className="mval">{event.projected_time}</div>
-                <div className="mlbl">Tiempo proyectado</div>
-                <div className="msub">Según tu ritmo actual</div>
-              </div>
-              <div className="metric">
-                <div className="mval">{event.pr_probability}%</div>
-                <div className="mlbl">Prob. de PR</div>
-                <div className="msub">De lograr tu récord personal</div>
-              </div>
-              <div className="metric">
-                <div className="mval">{event.compatibility}%</div>
-                <div className="mlbl">Compatibilidad</div>
-                <div className="msub">Qué tan bien calza con lo que buscas</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RealPerformancePanel event={event} />
 
         <div className="block">
           <div className="block-head">
             <h3 className="h">El circuito</h3>
           </div>
           {event.circuit_type && <p className="route-hook">{event.circuit_type}</p>}
+
+          {legs && (
+            <div className="leg-breakdown">
+              <div className="leg-row">
+                <span className="leg-icon">🏊</span>
+                <span className="leg-name">Nado</span>
+                <span className="leg-dist">{legs.swimKm} km</span>
+              </div>
+              <div className="leg-row">
+                <span className="leg-icon">🚴</span>
+                <span className="leg-name">Bici</span>
+                <span className="leg-dist">{legs.bikeKm} km</span>
+              </div>
+              <div className="leg-row">
+                <span className="leg-icon">🏃</span>
+                <span className="leg-name">Trote</span>
+                <span className="leg-dist">{legs.runKm} km</span>
+              </div>
+              {cutoff && (
+                <p className="leg-cutoff-note">
+                  ⏱ Tiempo de corte total: <b>{cutoff.label}</b>. {cutoff.note}
+                </p>
+              )}
+            </div>
+          )}
+
           {event.lat != null && event.lng != null && (
             <CircuitMapLoader lat={event.lat} lng={event.lng} name={event.name} city={event.city} region={event.region} />
           )}
@@ -296,9 +274,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               </div>
             </div>
             <div className="cost-note">
-              Estimado desde Santiago, con bandas de traslado y alojamiento — no es una cotización exacta ni compite
-              con tu Performance Score: esto responde si te conviene pagarla, no si rindes bien ahí.{' '}
-              {cost.min !== cost.max && `Rango: ${fmtCLP(cost.min)} a ${fmtCLP(cost.max)}.`}
+              La inscripción es el precio real informado por la organización. El traslado y alojamiento son un rango
+              realista según tarifas de vuelo ida/vuelta Santiago–{event.city} y alojamiento básico–medio en{' '}
+              {event.city}, no una cotización en vivo — los precios reales varían según fecha y disponibilidad, así
+              que confírmalos antes de comprar. {cost.min !== cost.max && `Rango total: ${fmtCLP(cost.min)} a ${fmtCLP(cost.max)}.`}
             </div>
           </div>
         </div>

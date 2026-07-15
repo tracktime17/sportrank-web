@@ -184,15 +184,6 @@ export function UsersIcon(props: IconProps) {
   )
 }
 
-export function TrendUpIcon(props: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M3 17l6-6 4 4 8-9" />
-      <path d="M15 6h6v6" />
-    </svg>
-  )
-}
-
 export function StarIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" {...props}>

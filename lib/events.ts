@@ -311,3 +311,55 @@ export function costLabel(e: EventRow) {
   const { min, max } = costRange(e)
   return min === max ? fmtCLP(min) : `${fmtCLP(min)}–${fmtCLP(max)}`
 }
+
+/* =========================================================
+   FORMATOS REALES DE TRIATLÓN — distancias y tiempos de corte
+   estandarizados y públicos de cada formato (Sprint, Olímpico,
+   70.3, 140.6), no inventados por evento. Fuente: reglamento
+   oficial IRONMAN (70.3 = 8h30, 140.6 = 17h, triatlonpucon.cl
+   para 70.3 Pucón específico) y estándar olímpico/sprint.
+========================================================= */
+export interface TriLegSplit {
+  swimKm: number
+  bikeKm: number
+  runKm: number
+}
+
+const TRI_FORMAT_LEGS: Record<string, TriLegSplit> = {
+  '140.6': { swimKm: 3.8, bikeKm: 180, runKm: 42.2 },
+  '70.3': { swimKm: 1.9, bikeKm: 90, runKm: 21.1 },
+  Olímpico: { swimKm: 1.5, bikeKm: 40, runKm: 10 },
+  Sprint: { swimKm: 0.75, bikeKm: 20, runKm: 5 },
+}
+
+function matchTriFormat(distances: string[] | null): keyof typeof TRI_FORMAT_LEGS | null {
+  if (!distances) return null
+  const joined = distances.join(' ').toLowerCase()
+  if (joined.includes('140.6')) return '140.6'
+  if (joined.includes('70.3')) return '70.3'
+  if (joined.includes('olímpico') || joined.includes('olimpico') || joined.includes('5150')) return 'Olímpico'
+  if (joined.includes('sprint')) return 'Sprint'
+  return null
+}
+
+export function triLegsFor(distances: string[] | null): TriLegSplit | null {
+  const format = matchTriFormat(distances)
+  return format ? TRI_FORMAT_LEGS[format] : null
+}
+
+export interface CutoffInfo {
+  label: string
+  note: string
+}
+
+const TRI_FORMAT_CUTOFFS: Record<string, CutoffInfo> = {
+  '140.6': { label: '17h 00min', note: 'Estándar IRONMAN full: nado 2h20, bici 10h30, total 17h desde la salida.' },
+  '70.3': { label: '8h 30min', note: 'Estándar IRONMAN 70.3: nado 1h10, bici 5h30, total 8h30 desde la salida.' },
+  Olímpico: { label: '~4h 00min', note: 'Aproximado para distancia olímpica — confirma el detalle con el organizador.' },
+  Sprint: { label: '~2h 00min', note: 'Aproximado para distancia sprint — confirma el detalle con el organizador.' },
+}
+
+export function cutoffInfoFor(distances: string[] | null): CutoffInfo | null {
+  const format = matchTriFormat(distances)
+  return format ? TRI_FORMAT_CUTOFFS[format] : null
+}
