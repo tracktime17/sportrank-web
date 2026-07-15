@@ -211,6 +211,14 @@ input {
   background: var(--accent);
   color: #fff;
 }
+.navlinks a.navlink-ai {
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-weight: 800;
+}
+.navlinks a.navlink-ai:hover {
+  background: var(--accent-tint-strong);
+}
 
 .bottomnav {
   display: none;
@@ -806,6 +814,23 @@ input {
   text-decoration: underline;
 }
 
+.quiz-ai-nudge {
+  display: block;
+  margin-top: 14px;
+  padding: 11px 16px;
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-tint-strong);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+.quiz-ai-nudge:hover {
+  background: var(--accent-tint-strong);
+}
+
 .match-tabs {
   display: inline-flex;
   gap: 4px;
@@ -871,7 +896,7 @@ input {
   position: relative;
   z-index: 1;
   height: 100%;
-  min-height: 340px;
+  min-height: 460px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -897,6 +922,36 @@ input {
   line-height: 1.55;
   max-width: 42ch;
   margin-bottom: 18px;
+}
+.ai-panel-lock .ai-panel-lead {
+  margin-bottom: 14px;
+}
+.ai-panel-benefits {
+  text-align: left;
+  max-width: 340px;
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ai-panel-benefits li {
+  display: flex;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ai-panel-check {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+.ai-panel-founder {
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.5;
+  max-width: 36ch;
+  margin: 14px 0 0;
 }
 .ai-panel-cta {
   background: var(--accent);

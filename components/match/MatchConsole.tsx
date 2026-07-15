@@ -210,6 +210,12 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
   }, [])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ai') === '1') {
+      setMode('ai')
+    }
+  }, [])
+
   function selectAndAdvance(update: (p: MatchPreferences) => MatchPreferences) {
     setPref(update)
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
@@ -459,6 +465,9 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
               }}
             >
               ✎ Editar mis respuestas
+            </button>
+            <button type="button" className="quiz-ai-nudge" onClick={() => setMode('ai')}>
+              ✨ ¿Y si esto fuera todavía más preciso? Prueba Match con IA
             </button>
           </div>
         ) : (

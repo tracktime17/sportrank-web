@@ -12,6 +12,8 @@ const LINKS = [
   { href: '/favoritos', label: 'Favoritos' },
 ]
 
+const AI_LINK = { href: '/?ai=1#match-section', label: '✨ Match IA' }
+
 export function TopNav() {
   const pathname = usePathname()
   const { count: favCount, hydrated: favHydrated } = useFavorites()
@@ -53,6 +55,9 @@ export function TopNav() {
               </Link>
             )
           })}
+          <Link href={AI_LINK.href} className="navlink-ai">
+            {AI_LINK.label}
+          </Link>
         </div>
       </div>
     </nav>
