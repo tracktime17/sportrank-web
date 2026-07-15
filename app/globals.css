@@ -806,6 +806,93 @@ input {
   text-decoration: underline;
 }
 
+.ai-waitlist {
+  margin-top: 24px;
+  padding: 22px 26px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--accent-tint-strong);
+  background: linear-gradient(135deg, var(--accent-tint), transparent 60%);
+}
+.ai-waitlist-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent-tint-strong);
+  border-radius: var(--r-pill);
+  padding: 5px 12px;
+  margin-bottom: 12px;
+}
+.ai-waitlist h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.ai-waitlist p {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 62ch;
+  margin-bottom: 16px;
+}
+.ai-waitlist-form {
+  display: flex;
+  gap: 10px;
+  max-width: 420px;
+}
+.ai-waitlist-form input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-pill);
+  padding: 11px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.ai-waitlist-form input:disabled {
+  opacity: 0.6;
+}
+.ai-waitlist-form button {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px 20px;
+  border-radius: var(--r-pill);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.ai-waitlist-form button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.ai-waitlist-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ai-waitlist-done {
+  color: var(--accent);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.ai-waitlist-error {
+  color: #ff6b6b;
+  font-size: 12.5px;
+  margin-top: 8px;
+}
+@media (max-width: 520px) {
+  .ai-waitlist-form {
+    flex-direction: column;
+    max-width: none;
+  }
+}
+
 .seg {
   position: relative;
   display: flex;
