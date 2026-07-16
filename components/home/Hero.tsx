@@ -37,7 +37,7 @@ export function Hero({ featured, stats }: { featured: EventRow[]; stats: HeroSta
 
   return (
     <div className="hero-panel">
-      <div className="hero-photos">
+      <div className={`hero-photos ${rest.length === 0 ? 'single' : ''}`}>
         <HeroTile event={main} size="main" />
         {rest.length > 0 && (
           <div className="hero-tile-stack">

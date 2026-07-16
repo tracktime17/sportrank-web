@@ -437,10 +437,10 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
 
         <div className="match-tabs">
           <button type="button" className={`match-tab ${mode === 'real' ? 'active' : ''}`} onClick={() => setMode('real')}>
-            🎯 Match real
+            Match Básico
           </button>
-          <button type="button" className={`match-tab ${mode === 'ai' ? 'active' : ''}`} onClick={() => setMode('ai')}>
-            ✨ Match con IA
+          <button type="button" className={`match-tab match-tab-pro ${mode === 'ai' ? 'active' : ''}`} onClick={() => setMode('ai')}>
+            ⚡ NextRace PRO
           </button>
         </div>
 
@@ -467,7 +467,7 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
               ✎ Editar mis respuestas
             </button>
             <button type="button" className="quiz-ai-nudge" onClick={() => setMode('ai')}>
-              ✨ ¿Y si esto fuera todavía más preciso? Prueba Match con IA
+              ⚡ Esto es tu match básico. Con NextRace PRO va más allá — descúbrelo
             </button>
           </div>
         ) : (

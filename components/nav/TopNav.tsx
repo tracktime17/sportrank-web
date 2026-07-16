@@ -12,7 +12,7 @@ const LINKS = [
   { href: '/favoritos', label: 'Favoritos' },
 ]
 
-const AI_LINK = { href: '/?ai=1#match-section', label: '✨ Match IA' }
+const AI_LINK = { href: '/?ai=1#match-section', label: '⚡ NextRace PRO' }
 
 export function TopNav() {
   const pathname = usePathname()

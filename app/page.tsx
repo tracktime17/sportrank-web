@@ -12,12 +12,6 @@ function byDiscipline(events: EventRow[], discipline: Discipline) {
   return events.filter((e) => e.discipline === discipline).sort((a, b) => (b.pr_probability ?? 0) - (a.pr_probability ?? 0))
 }
 
-function topByScore(events: EventRow[], discipline: Discipline) {
-  return [...events]
-    .filter((e) => e.discipline === discipline)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
-}
-
 export default async function Home() {
   const events = await getEvents()
   const launchedEvents = events.filter((e) => isLaunched(e.discipline))
@@ -29,13 +23,7 @@ export default async function Home() {
 
   const triatlon = byDiscipline(launchedEvents, 'Triatlón')
 
-  const topPerDiscipline = (['Triatlón'] as const)
-    .map((d) => topByScore(launchedEvents, d))
-    .filter((e): e is EventRow => Boolean(e))
-  const heroMain = best ?? topPerDiscipline[0]
-  const heroFeatured = heroMain
-    ? [heroMain, ...topPerDiscipline.filter((e) => e.id !== heroMain.id)]
-    : []
+  const heroFeatured = [...launchedEvents].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3)
 
   return (
     <div className="wrap view-enter">

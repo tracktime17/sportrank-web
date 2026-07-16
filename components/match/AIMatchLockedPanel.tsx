@@ -12,9 +12,9 @@ const PREVIEW_TURNS = [
 ]
 
 const BENEFITS = [
-  'Contale lo que buscas en tus palabras, no en tiles — como a un entrenador, no a un formulario.',
-  'Aprende de tu historial: tus carreras, tus favoritas, lo que ya intentaste.',
-  'Te avisa apenas se abren inscripciones de tu próximo match ideal.',
+  'Te entiende en tus palabras, no en tiles — aprende de cada respuesta, no de un cuestionario fijo.',
+  'Compara contra tu propio historial: qué corriste, qué evitaste, qué realmente te gustó.',
+  'Alerta el segundo que abren inscripciones de tu match — antes que se llenen los cupos.',
 ]
 
 export function AIMatchLockedPanel() {
@@ -44,14 +44,18 @@ export function AIMatchLockedPanel() {
     if (status === 'loading') return
     setStatus('loading')
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('ai_waitlist').insert({ email, source: 'match_console_tab' })
-      if (!error) {
-        setStatus('success')
-        setWaitlistCount((n) => (n === null ? null : n + 1))
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'match_console_tab' }),
+      })
+      if (!res.ok) {
+        setStatus('error')
         return
       }
-      setStatus(error.code === '23505' ? 'duplicate' : 'error')
+      const { duplicate } = await res.json()
+      setStatus(duplicate ? 'duplicate' : 'success')
+      setWaitlistCount((n) => (n === null ? null : n + 1))
     } catch {
       setStatus('error')
     }
@@ -71,8 +75,9 @@ export function AIMatchLockedPanel() {
 
       <div className="ai-panel-lock">
         <div className="ai-panel-icon">🔒</div>
-        <h4>Match con IA</h4>
-        <p className="ai-panel-lead">Suscríbete para usar Encuentra tu match más personalizado.</p>
+        <div className="ai-panel-eyebrow">Para quienes toman en serio su próxima carrera</div>
+        <h4>NextRace PRO</h4>
+        <p className="ai-panel-lead">El match básico te da un score. PRO te dice qué hacer con él.</p>
 
         <ul className="ai-panel-benefits">
           {BENEFITS.map((b) => (
@@ -84,7 +89,7 @@ export function AIMatchLockedPanel() {
 
         {done ? (
           <div className="ai-panel-done">
-            {status === 'success' ? '✓ Listo, te avisamos apenas esté disponible.' : '✓ Ya estabas suscrito — te avisaremos apenas esté disponible.'}
+            {status === 'success' ? '✓ Listo, aseguraste tu lugar — te avisamos apenas esté disponible.' : '✓ Ya estabas en la lista — te avisaremos apenas esté disponible.'}
           </div>
         ) : showForm ? (
           <form className="ai-panel-form" onSubmit={handleSubmit}>
@@ -98,12 +103,12 @@ export function AIMatchLockedPanel() {
               disabled={status === 'loading'}
             />
             <button type="submit" disabled={status === 'loading'}>
-              {status === 'loading' ? 'Enviando…' : 'Confirmar'}
+              {status === 'loading' ? 'Confirmando…' : 'Confirmar mi lugar'}
             </button>
           </form>
         ) : (
           <button type="button" className="ai-panel-cta" onClick={() => setShowForm(true)}>
-            Suscribirse
+            Quiero ser fundador
           </button>
         )}
 
@@ -112,8 +117,8 @@ export function AIMatchLockedPanel() {
         {!done && (
           <p className="ai-panel-founder">
             {waitlistCount !== null && waitlistCount > 0
-              ? `🔥 ${waitlistCount} ${waitlistCount === 1 ? 'triatleta ya se anotó' : 'triatletas ya se anotaron'} — quienes se suman ahora aseguran precio fundador al lanzar.`
-              : 'Sé de los primeros en anotarte — acceso anticipado y precio fundador al lanzar.'}
+              ? `🔥 ${waitlistCount} ${waitlistCount === 1 ? 'triatleta ya aseguró' : 'triatletas ya aseguraron'} su lugar de fundador.`
+              : 'Los primeros en sumarse acceden antes y a mejor precio cuando lancemos.'}
           </p>
         )}
       </div>
