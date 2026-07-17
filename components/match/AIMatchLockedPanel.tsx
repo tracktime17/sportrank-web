@@ -17,6 +17,11 @@ const BENEFITS = [
   'Alerta el segundo que abren inscripciones de tu match — antes que se llenen los cupos.',
 ]
 
+// Un conteo bajo (1, 2, 3 personas) se ve débil, no genera confianza — mejor
+// dejar el mensaje aspiracional genérico hasta que el número real sea
+// digno de mostrarse. Nunca se infla el número, solo se elige cuándo mostrarlo.
+const MIN_COUNT_TO_SHOW = 10
+
 export function AIMatchLockedPanel() {
   const [showForm, setShowForm] = useState(false)
   const [email, setEmail] = useState('')
@@ -116,8 +121,8 @@ export function AIMatchLockedPanel() {
 
         {!done && (
           <p className="ai-panel-founder">
-            {waitlistCount !== null && waitlistCount > 0
-              ? `🔥 ${waitlistCount} ${waitlistCount === 1 ? 'triatleta ya se anotó' : 'triatletas ya se anotaron'} para tener acceso anticipado.`
+            {waitlistCount !== null && waitlistCount >= MIN_COUNT_TO_SHOW
+              ? `🔥 ${waitlistCount} triatletas ya se anotaron para tener acceso anticipado.`
               : 'Los primeros en sumarse acceden antes y a mejor precio cuando lancemos.'}
           </p>
         )}
