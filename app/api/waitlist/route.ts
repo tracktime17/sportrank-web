@@ -27,8 +27,8 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL ?? 'NextRace <onboarding@resend.dev>',
           to: email,
-          subject: 'Aseguraste tu lugar en NextRace PRO',
-          html: '<p>¡Gracias por sumarte! Aseguraste tu lugar como fundador de NextRace PRO — te avisamos apenas esté disponible.</p>',
+          subject: 'Tienes acceso anticipado a NextRace PRO',
+          html: '<p>¡Gracias por sumarte! Quedaste anotado para acceso anticipado a NextRace PRO — te avisamos apenas esté disponible.</p>',
         }),
       })
     } catch {

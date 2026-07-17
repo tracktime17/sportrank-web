@@ -108,7 +108,7 @@ export function AIMatchLockedPanel() {
           </form>
         ) : (
           <button type="button" className="ai-panel-cta" onClick={() => setShowForm(true)}>
-            Quiero ser fundador
+            Quiero acceso anticipado
           </button>
         )}
 
@@ -117,7 +117,7 @@ export function AIMatchLockedPanel() {
         {!done && (
           <p className="ai-panel-founder">
             {waitlistCount !== null && waitlistCount > 0
-              ? `🔥 ${waitlistCount} ${waitlistCount === 1 ? 'triatleta ya aseguró' : 'triatletas ya aseguraron'} su lugar de fundador.`
+              ? `🔥 ${waitlistCount} ${waitlistCount === 1 ? 'triatleta ya se anotó' : 'triatletas ya se anotaron'} para tener acceso anticipado.`
               : 'Los primeros en sumarse acceden antes y a mejor precio cuando lancemos.'}
           </p>
         )}
