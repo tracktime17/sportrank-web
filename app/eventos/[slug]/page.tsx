@@ -101,12 +101,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {event.stats_estimated && (
           <div className="estimate-banner">
-            <span className="estimate-banner-icon">📊</span>
+            <span className="estimate-banner-icon">🧮</span>
             <p>
-              <b>Fecha, precio de inscripción y formato de distancia son datos confirmados</b> por la organización.
-              Clima, desnivel, cupos e indicadores de nivel de esta carrera todavía son{' '}
-              <b>estimaciones editoriales nuestras</b>, no datos oficiales confirmados — los actualizaremos apenas
-              tengamos la fuente real.
+              <b>Fecha, precio de inscripción y formato de distancia están confirmados</b> por la organización. Clima,
+              desnivel, cupos y nivel de exigencia son un <b>cálculo de nuestro modelo NextRace</b> — el mismo que arma tu
+              Performance Score — y los reemplazamos por la fuente oficial apenas la organización la publique. Con{' '}
+              <b>NextRace PRO</b> vamos a cruzar estos datos directo con cada organizador, en vez de proyectarlos.
             </p>
           </div>
         )}

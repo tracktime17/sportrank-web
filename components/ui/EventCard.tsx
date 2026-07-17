@@ -84,7 +84,7 @@ export function EventCard({ event }: { event: EventRow }) {
           {signal.icon} {signal.label}
         </div>
       )}
-      {event.stats_estimated && <div className="card-estimate">📊 Métricas estimadas</div>}
+      {event.stats_estimated && <div className="card-estimate">🧮 Proyección NextRace</div>}
 
       <div className="card-bottom">
         <div className="card-score-badge">{event.score ?? 0}%</div>
