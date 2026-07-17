@@ -2823,6 +2823,40 @@ footer {
   flex-wrap: wrap;
   gap: 12px;
 }
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.footer-right a {
+  color: var(--text-3);
+  transition: color 0.15s ease;
+}
+.footer-right a:hover {
+  color: var(--text-2);
+}
+
+.legal-body {
+  margin-top: 24px;
+}
+.legal-body h2 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 28px 0 10px;
+}
+.legal-body h2:first-child {
+  margin-top: 0;
+}
+.legal-body p {
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+.legal-body a {
+  color: var(--accent);
+  text-decoration: underline;
+}
 
 .dots {
   display: inline-flex;

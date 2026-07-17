@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import Link from 'next/link'
 import { TopNav } from '@/components/nav/TopNav'
 import { BottomNav } from '@/components/nav/BottomNav'
 import './globals.css'
@@ -40,9 +42,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {children}
         <footer className="wrap">
           <div>NextRace — Running · Triatlón · Ciclismo</div>
-          <div>Datos reales, Chile · Beta</div>
+          <div className="footer-right">
+            <Link href="/privacidad">Privacidad</Link>
+            <span>Datos reales, Chile · Beta</span>
+          </div>
         </footer>
         <BottomNav />
+        <Analytics />
       </body>
     </html>
   )
