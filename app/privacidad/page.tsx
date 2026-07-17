@@ -35,8 +35,8 @@ export default function PrivacyPage() {
 
         <h2>Analítica</h2>
         <p>
-          Usamos Vercel Analytics para entender cuánta gente visita el sitio. Es agregado y anónimo — no usa
-          cookies ni identifica visitantes individuales.
+          Usamos Cloudflare Web Analytics para entender cuánta gente visita el sitio. Es agregado y anónimo — no
+          usa cookies ni identifica visitantes individuales.
         </p>
 
         <h2>Tus derechos</h2>

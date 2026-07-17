@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import Script from 'next/script'
 import Link from 'next/link'
 import { TopNav } from '@/components/nav/TopNav'
 import { BottomNav } from '@/components/nav/BottomNav'
@@ -48,7 +48,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </footer>
         <BottomNav />
-        <Analytics />
+        {process.env.NEXT_PUBLIC_CF_BEACON_TOKEN && (
+          <Script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: process.env.NEXT_PUBLIC_CF_BEACON_TOKEN })}
+          />
+        )}
       </body>
     </html>
   )
