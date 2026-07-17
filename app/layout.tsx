@@ -11,10 +11,25 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+const TITLE = 'NextRace — Encuentra el evento perfecto para ti'
+const DESCRIPTION =
+  'Motor de compatibilidad deportiva para running, triatlón y ciclismo en Chile. Primero el deporte, luego distancia, terreno, clima y exigencia — nunca comparados entre sí.'
+
 export const metadata: Metadata = {
-  title: 'NextRace — Encuentra el evento perfecto para ti',
-  description:
-    'Motor de compatibilidad deportiva para running, triatlón y ciclismo en Chile. Primero el deporte, luego distancia, terreno, clima y exigencia — nunca comparados entre sí.',
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: 'NextRace',
+    locale: 'es_CL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getEventBySlug, getEvents } from '@/lib/events-server'
 import { costRange, fmtCLP, costLabel, feelsLikeC, triLegsFor, cutoffInfoFor } from '@/lib/events'
 import { ElevationChart } from '@/components/ui/ElevationChart'
@@ -38,6 +39,33 @@ function daysUntilLabel(eventDateISO: string) {
   if (days === 0) return '¡Es hoy!'
   if (days === 1) return 'Es mañana'
   return `Faltan ${days} días`
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const event = await getEventBySlug(slug).catch(() => null)
+  if (!event) return {}
+
+  const title = `${event.name} — NextRace`
+  const description =
+    event.blurb ?? `${event.name} en ${event.city}, ${event.region}. Fecha, precio, clima y compatibilidad real en NextRace.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      images: event.image_url ? [{ url: event.image_url, width: 1200, height: 630, alt: event.name }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: event.image_url ? [event.image_url] : undefined,
+    },
+  }
 }
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
