@@ -6,6 +6,7 @@ import { TileSelect } from '@/components/ui/TileSelect'
 import type { SegOption } from '@/components/ui/Seg'
 import { ClimateSlider } from '@/components/ui/ClimateSlider'
 import { AIMatchLockedPanel } from '@/components/match/AIMatchLockedPanel'
+import { createClient } from '@/lib/supabase/client'
 import { useMatchPreferences } from '@/lib/store/useMatchPreferences'
 import {
   BarsIcon,
@@ -180,6 +181,14 @@ function useAnimatedNumber(target: number, duration = 650) {
   return value
 }
 
+async function logQuizCompletion(sport: Discipline) {
+  try {
+    await createClient().from('quiz_completions').insert({ sport })
+  } catch {
+    // best-effort: si falla, no interrumpe la experiencia del usuario
+  }
+}
+
 export function MatchConsole({ events }: { events: EventRow[] }) {
   const router = useRouter()
   const { savePref } = useMatchPreferences()
@@ -230,6 +239,9 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setTimeout(() => revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
     }
+    // Conteo anónimo de quizzes completados — ninguna respuesta se guarda,
+    // solo el hecho de que alguien llegó al final (ver /privacidad).
+    logQuizCompletion(pref.sport)
   }
 
   const ranked = useMemo(() => computeMatch(events, pref), [events, pref])

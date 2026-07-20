@@ -88,6 +88,12 @@ export interface AiWaitlistRow {
   created_at: string
 }
 
+export interface QuizCompletionRow {
+  id: string
+  sport: Discipline | null
+  created_at: string
+}
+
 // Shape mínimo que espera el cliente supabase-js tipado.
 // Alcanza con esto para autocompletado en .from('events').select(...), etc.
 // IMPORTANTE: tiene que ser `type`, no `interface` — postgrest-js necesita
@@ -127,6 +133,12 @@ export type Database = {
         Row: AiWaitlistRow
         Insert: Partial<AiWaitlistRow> & Pick<AiWaitlistRow, 'email'>
         Update: Partial<AiWaitlistRow>
+        Relationships: []
+      }
+      quiz_completions: {
+        Row: QuizCompletionRow
+        Insert: Partial<QuizCompletionRow>
+        Update: Partial<QuizCompletionRow>
         Relationships: []
       }
     }
