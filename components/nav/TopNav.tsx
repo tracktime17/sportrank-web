@@ -31,15 +31,9 @@ export function TopNav() {
               </linearGradient>
             </defs>
             <rect width="28" height="28" rx="8" fill="url(#logo-mark-grad)" />
-            <path d="M10 8l5 6-5 6" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            <path
-              d="M15.5 8l5 6-5 6"
-              stroke="rgba(255,255,255,0.55)"
-              strokeWidth="2.4"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <circle cx="7" cy="21" r="1.9" fill="#fff" opacity="0.6" />
+            <path d="M7 21C7 21 13 21 13 14C13 7 21 7 21 7" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+            <circle cx="21" cy="7" r="2.4" fill="#fff" />
           </svg>
           NextRace
         </Link>

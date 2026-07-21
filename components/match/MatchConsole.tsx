@@ -623,7 +623,8 @@ export function MatchConsole({ events }: { events: EventRow[] }) {
             <div className="reveal-brand">
               <svg viewBox="0 0 28 28">
                 <rect width="28" height="28" rx="8" fill="#2f9bff" />
-                <path d="M10 8l5 6-5 6" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7 21C7 21 13 21 13 14C13 7 21 7 21 7" stroke="#fff" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+                <circle cx="21" cy="7" r="2.4" fill="#fff" />
               </svg>
               NextRace Match
             </div>
