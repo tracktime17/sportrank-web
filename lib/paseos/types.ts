@@ -35,6 +35,9 @@ export interface WalkSession {
   verification: VerificationResult | null
 }
 
+/** Quién está mirando este paseo, relativo a auth.uid() del que consulta. */
+export type ViewerRole = 'owner' | 'walker' | 'other'
+
 export interface Booking {
   id: string
   dogName: string
@@ -47,15 +50,5 @@ export interface Booking {
   createdAt: string
   session: WalkSession
   isDemo?: boolean
-}
-
-export function emptySession(): WalkSession {
-  return {
-    startedAt: null,
-    endedAt: null,
-    startPhoto: null,
-    endPhoto: null,
-    route: [],
-    verification: null,
-  }
+  viewerRole: ViewerRole
 }

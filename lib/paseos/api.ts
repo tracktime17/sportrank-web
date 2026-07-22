@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { ensureAnonSession } from './auth'
 import { computeVerification } from './geo'
-import type { Booking, BookingStatus, RoutePoint } from './types'
+import type { Booking, BookingStatus, RoutePoint, ViewerRole } from './types'
 
 interface WalkBookingRow {
   id: string
@@ -23,7 +23,13 @@ interface WalkBookingRow {
   created_at: string
 }
 
-function rowToBooking(row: WalkBookingRow): Booking {
+function viewerRoleFor(row: WalkBookingRow, viewerId: string): ViewerRole {
+  if (row.owner_id === viewerId) return 'owner'
+  if (row.walker_id === viewerId) return 'walker'
+  return 'other'
+}
+
+function rowToBooking(row: WalkBookingRow, viewerId: string): Booking {
   const session = {
     startedAt: row.started_at ? new Date(row.started_at).getTime() : null,
     endedAt: row.ended_at ? new Date(row.ended_at).getTime() : null,
@@ -47,6 +53,7 @@ function rowToBooking(row: WalkBookingRow): Booking {
     createdAt: row.created_at,
     isDemo: row.is_demo,
     session,
+    viewerRole: viewerRoleFor(row, viewerId),
   }
 }
 
@@ -91,11 +98,11 @@ export async function createBooking(input: {
 /** Trae un paseo por id — funciona tanto si eres owner/walker como si aún no lo eres (link compartido). */
 export async function getBooking(id: string): Promise<Booking | null> {
   const supabase = createClient()
-  await ensureAnonSession(supabase)
+  const user = await ensureAnonSession(supabase)
   const { data, error } = await supabase.rpc('get_shared_booking', { p_id: id })
   if (error) throw error
   const row = (data as WalkBookingRow[] | null)?.[0]
-  return row ? rowToBooking(row) : null
+  return row ? rowToBooking(row, user.id) : null
 }
 
 export async function listMyBookings(): Promise<Booking[]> {
@@ -108,7 +115,7 @@ export async function listMyBookings(): Promise<Booking[]> {
     .order('created_at', { ascending: false })
     .returns<WalkBookingRow[]>()
   if (error) throw error
-  return (data ?? []).map(rowToBooking)
+  return (data ?? []).map((row) => rowToBooking(row, user.id))
 }
 
 export async function cancelBooking(id: string) {
@@ -121,13 +128,13 @@ export async function cancelBooking(id: string) {
 /** Reclama el paseo de forma atómica — falla si otro paseador ya lo tomó. */
 export async function claimBooking(id: string, startPhotoFile: File): Promise<Booking> {
   const supabase = createClient()
-  await ensureAnonSession(supabase)
+  const user = await ensureAnonSession(supabase)
   const startPhotoUrl = await uploadPhoto(id, 'start', startPhotoFile)
   const { data, error } = await supabase.rpc('claim_booking', { p_id: id, p_start_photo_url: startPhotoUrl })
   if (error) throw error
   const row = (data as WalkBookingRow[] | null)?.[0]
   if (!row) throw new Error('Este paseo ya no está disponible — puede que otro paseador ya lo haya tomado.')
-  return rowToBooking(row)
+  return rowToBooking(row, user.id)
 }
 
 export async function addRoutePoint(id: string, route: RoutePoint[]) {

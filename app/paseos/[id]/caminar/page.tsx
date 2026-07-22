@@ -28,7 +28,14 @@ export default function CaminarPage() {
   const lastPointRef = useRef<RoutePoint | null>(null)
   const startedAtRef = useRef<number | null>(null)
 
-  const phase = booking?.status === 'en_curso' ? 'during' : 'before'
+  const phase: 'before' | 'during' | 'taken' | 'cancelled' =
+    booking?.status === 'cancelado'
+      ? 'cancelled'
+      : booking?.status === 'en_curso'
+        ? booking.viewerRole === 'walker'
+          ? 'during'
+          : 'taken'
+        : 'before'
   const geoSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
 
   useEffect(() => {
@@ -167,6 +174,25 @@ export default function CaminarPage() {
       {!geoSupported && <div className="paseo-flag paseo-flag-bad">Este navegador no soporta geolocalización.</div>}
       {geoError && <div className="paseo-flag paseo-flag-bad">{geoError}</div>}
       {loadError && <div className="paseo-flag paseo-flag-bad">{loadError}</div>}
+
+      {phase === 'taken' && (
+        <div className="paseo-panel">
+          <h3>Este paseo ya fue tomado</h3>
+          <p>Otro paseador ya inició el registro de este paseo desde su celular — no puedes iniciarlo también.</p>
+          <div className="paseo-cta-row" style={{ marginTop: 16 }}>
+            <Link href={`/paseos/${params.id}`} className="btn btn-ghost">
+              Ver el paseo
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {phase === 'cancelled' && (
+        <div className="paseo-panel">
+          <h3>Este paseo fue cancelado</h3>
+          <p>El dueño canceló este paseo — ya no se puede iniciar.</p>
+        </div>
+      )}
 
       {phase === 'before' && (
         <div className="paseo-panel">
