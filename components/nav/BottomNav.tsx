@@ -18,6 +18,8 @@ export function BottomNav() {
   const { count: favCount, hydrated: favHydrated } = useFavorites()
   const { count: compareCount, hydrated: compareHydrated } = useCompare()
 
+  if (pathname?.startsWith('/paseos')) return null
+
   return (
     <nav className="bottomnav">
       <div className="row">

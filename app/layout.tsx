@@ -44,6 +44,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div>NextRace — Running · Triatlón · Ciclismo</div>
           <div className="footer-right">
             <Link href="/privacidad">Privacidad</Link>
+            <Link href="/paseos">🐾 Huella (prototipo)</Link>
             <span>Datos reales, Chile · Beta</span>
           </div>
         </footer>

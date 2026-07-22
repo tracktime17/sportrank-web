@@ -2975,3 +2975,333 @@ footer {
     transition: none !important;
   }
 }
+
+/* ===================================================================
+   Paseos (Huella) — prototipo de verificación de paseos de perro.
+   Namespace propio (.paseo-*) para no interferir con el resto del sitio.
+   =================================================================== */
+.paseo-app {
+  min-height: 100vh;
+}
+.paseo-topnav {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.paseo-topnav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.paseo-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 17px;
+}
+.paseo-logo-mark {
+  font-size: 20px;
+}
+.paseo-footer {
+  border-top: 1px solid var(--border);
+  padding: 22px 0;
+  color: var(--text-3);
+  font-size: 13px;
+  margin-top: 48px;
+}
+
+.paseo-how {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 28px 0;
+}
+.paseo-how-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+}
+.paseo-how-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.paseo-how-step h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.paseo-how-step p {
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+
+.paseo-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.paseo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.paseo-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  transition: border-color 0.15s ease;
+}
+.paseo-list-item:hover {
+  border-color: var(--accent);
+}
+.paseo-list-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.paseo-list-breed {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.paseo-list-sub {
+  color: var(--text-2);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.paseo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.paseo-badge-ok {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.paseo-badge-warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.paseo-badge-bad {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.paseo-badge-pending {
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+
+.paseo-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin: 16px 0 24px;
+}
+.paseo-panel h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.paseo-panel p {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.paseo-verdict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0;
+}
+
+.paseo-map,
+.paseo-map-skeleton {
+  width: 100%;
+  height: 320px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.paseo-map-wrap {
+  margin: 16px 0;
+}
+
+.paseo-pin span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+.paseo-pin-start span {
+  background: var(--good);
+}
+.paseo-pin-end span {
+  background: var(--accent);
+}
+.paseo-pin-live span {
+  background: var(--warn);
+  box-shadow: 0 0 0 4px var(--warn-tint);
+}
+
+.paseo-stats-grid,
+.paseo-live-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.paseo-live-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+.paseo-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px;
+  text-align: center;
+}
+.paseo-stat .v {
+  font-size: 20px;
+  font-weight: 800;
+}
+.paseo-stat .l {
+  color: var(--text-2);
+  font-size: 11.5px;
+  margin-top: 4px;
+}
+
+.paseo-photos-row {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+.paseo-photo {
+  flex: 1;
+  position: relative;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.paseo-photo img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+.paseo-photo span {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(10, 10, 12, 0.75);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--r-pill);
+}
+
+.paseo-flags {
+  margin: 24px 0;
+}
+.paseo-flags h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.paseo-flag {
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  margin-bottom: 8px;
+}
+.paseo-flag-ok {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.paseo-flag-warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.paseo-flag-bad {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+
+.paseo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.paseo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.paseo-field input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.paseo-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.paseo-duration-row {
+  display: flex;
+  gap: 8px;
+}
+.paseo-duration-opt {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.paseo-duration-opt.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .paseo-how {
+    grid-template-columns: 1fr;
+  }
+  .paseo-stats-grid,
+  .paseo-live-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
