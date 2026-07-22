@@ -1,71 +1,115 @@
--- Esquema propuesto para "Huella" (paseo verificado) cuando pase de
--- prototipo (localStorage, ver lib/paseos/store.ts) a backend real con
--- Supabase. NO se aplica automáticamente — es referencia para cuando el
--- equipo decida conectar auth real de dueños/paseadores.
+-- Esquema real de "Huella" (paseo verificado), aplicado al proyecto Supabase
+-- de sportrank-web (namespace propio — no toca events/favorites/etc.).
 --
--- Fotos: se recomienda guardarlas en Supabase Storage (bucket "paseos") y
--- almacenar aquí solo la ruta/URL, no el binario.
+-- Modelo de confianza: sin cuentas/registro. Cada dispositivo obtiene un
+-- auth.uid() estable vía sign-in anónimo de Supabase (ver lib/paseos/auth.ts).
+-- El dueño crea el paseo (queda como owner_id) y comparte el link; el
+-- paseador que lo abre y confirma la foto de inicio lo "reclama" como
+-- walker_id. Antes de reclamarlo, la lectura pasa por una función
+-- SECURITY DEFINER de una sola fila por id exacto — nunca por un listado
+-- abierto — así que no se pueden enumerar paseos ajenos.
+--
+-- Requiere habilitar "Allow anonymous sign-ins" en el proyecto
+-- (Authentication → Sign In / Providers) para que signInAnonymously()
+-- funcione desde el cliente.
 
-create table if not exists dogs (
+create table walk_bookings (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users (id) on delete cascade,
-  name text not null,
-  breed text,
-  photo_url text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists walk_bookings (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users (id) on delete cascade,
-  walker_id uuid references auth.users (id) on delete set null,
-  dog_id uuid not null references dogs (id) on delete cascade,
+  owner_id uuid not null,
+  walker_id uuid,
+  dog_name text not null,
+  dog_breed text,
+  walker_name text not null,
   scheduled_at timestamptz not null,
   expected_minutes int not null,
   price_clp int,
   status text not null default 'pendiente' check (status in ('pendiente', 'en_curso', 'completado', 'cancelado')),
-  created_at timestamptz not null default now()
-);
-
-create table if not exists walk_sessions (
-  booking_id uuid primary key references walk_bookings (id) on delete cascade,
   started_at timestamptz,
   ended_at timestamptz,
   start_photo_url text,
   end_photo_url text,
-  route jsonb not null default '[]', -- [{lat, lng, t, accuracy}, ...]
-  distance_m numeric,
-  verification_score int,
-  verification_status text check (verification_status in ('verificado', 'revisar', 'no_verificado')),
-  verification_flags jsonb -- [{level, message}, ...]
+  route jsonb not null default '[]'::jsonb, -- [{lat, lng, t, accuracy}, ...]
+  is_demo boolean not null default false,
+  created_at timestamptz not null default now()
 );
 
-alter table dogs enable row level security;
 alter table walk_bookings enable row level security;
-alter table walk_sessions enable row level security;
 
-create policy "owners manage their dogs" on dogs
-  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy "insert own booking" on walk_bookings
+  for insert
+  with check (auth.uid() = owner_id);
 
-create policy "owner or walker can see booking" on walk_bookings
-  for select using (auth.uid() = owner_id or auth.uid() = walker_id);
-create policy "owner manages own bookings" on walk_bookings
-  for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
-create policy "walker updates assigned booking" on walk_bookings
-  for update using (auth.uid() = walker_id);
+create policy "owner or walker select" on walk_bookings
+  for select
+  using (auth.uid() = owner_id or auth.uid() = walker_id);
 
-create policy "owner or walker can see session" on walk_sessions
-  for select using (
-    exists (
-      select 1 from walk_bookings b
-      where b.id = walk_sessions.booking_id
-        and (b.owner_id = auth.uid() or b.walker_id = auth.uid())
-    )
-  );
-create policy "walker writes session" on walk_sessions
-  for all using (
-    exists (
-      select 1 from walk_bookings b
-      where b.id = walk_sessions.booking_id and b.walker_id = auth.uid()
-    )
-  );
+create policy "owner or walker update" on walk_bookings
+  for update
+  using (auth.uid() = owner_id or auth.uid() = walker_id)
+  with check (auth.uid() = owner_id or auth.uid() = walker_id);
+
+-- owner_id nunca cambia; walker_id solo se puede fijar una vez (desde null).
+-- Defensa en profundidad a nivel de base de datos, además del flujo normal.
+create or replace function protect_booking_identity()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.owner_id <> old.owner_id then
+    raise exception 'owner_id es inmutable';
+  end if;
+  if old.walker_id is not null and new.walker_id <> old.walker_id then
+    raise exception 'walker_id ya fue asignado a este paseo';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger protect_booking_identity_trg
+  before update on walk_bookings
+  for each row execute function protect_booking_identity();
+
+-- Lectura de una fila específica por id, para quien todavía no es owner
+-- ni walker (el paseador abriendo el link compartido por primera vez).
+create or replace function get_shared_booking(p_id uuid)
+returns setof walk_bookings
+language sql
+security definer
+set search_path = public
+as $$
+  select * from walk_bookings where id = p_id;
+$$;
+
+-- Reclamar un paseo: atómico, y solo si sigue pendiente y sin paseador
+-- asignado — no permite "hijackear" un paseo ya tomado por otro dispositivo.
+create or replace function claim_booking(p_id uuid, p_start_photo_url text)
+returns setof walk_bookings
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  update walk_bookings
+  set walker_id = auth.uid(),
+      status = 'en_curso',
+      started_at = now(),
+      start_photo_url = p_start_photo_url
+  where id = p_id
+    and walker_id is null
+    and status = 'pendiente'
+  returning *;
+end;
+$$;
+
+grant execute on function get_shared_booking(uuid) to anon, authenticated;
+grant execute on function claim_booking(uuid, text) to anon, authenticated;
+
+-- Fotos de inicio/término. Bucket público de solo-lectura vía URL directa
+-- (no requiere policy de SELECT en storage.objects, que solo habilitaría
+-- listar el bucket completo vía la API — evitado a propósito).
+insert into storage.buckets (id, name, public) values ('paseos', 'paseos', true);
+
+create policy "paseos authenticated insert" on storage.objects
+  for insert with check (bucket_id = 'paseos' and auth.role() = 'authenticated');

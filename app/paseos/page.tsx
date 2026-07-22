@@ -1,18 +1,36 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { usePaseoStore } from '@/lib/paseos/store'
+import { listMyBookings, seedDemo } from '@/lib/paseos/api'
 import { VerificationBadge } from '@/components/paseos/VerificationBadge'
 import { fmtDistance, fmtMinutes } from '@/lib/paseos/geo'
+import type { Booking } from '@/lib/paseos/types'
 
 export default function PaseosLanding() {
   const router = useRouter()
-  const { bookings, hydrated, seedDemo } = usePaseoStore()
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
 
-  function verEjemplo(kind: 'verificado' | 'revisar') {
-    const id = seedDemo(kind)
-    router.push(`/paseos/${id}`)
+  useEffect(() => {
+    listMyBookings()
+      .then(setBookings)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function verEjemplo(kind: 'verificado' | 'revisar') {
+    setSeeding(true)
+    try {
+      const id = await seedDemo(kind)
+      router.push(`/paseos/${id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el ejemplo.')
+      setSeeding(false)
+    }
   }
 
   return (
@@ -30,7 +48,7 @@ export default function PaseosLanding() {
         <div className="paseo-how-step">
           <div className="paseo-how-num">1</div>
           <h3>Agenda el paseo</h3>
-          <p>Defines el perro, el paseador y la duración acordada.</p>
+          <p>Defines el perro, el paseador y la duración acordada, y compartes el link con el paseador.</p>
         </div>
         <div className="paseo-how-step">
           <div className="paseo-how-num">2</div>
@@ -48,23 +66,25 @@ export default function PaseosLanding() {
         <Link href="/paseos/nuevo" className="btn btn-primary">
           Crear un paseo
         </Link>
-        <button type="button" className="btn btn-ghost" onClick={() => verEjemplo('verificado')}>
+        <button type="button" className="btn btn-ghost" disabled={seeding} onClick={() => verEjemplo('verificado')}>
           Ver ejemplo verificado
         </button>
-        <button type="button" className="btn btn-ghost" onClick={() => verEjemplo('revisar')}>
+        <button type="button" className="btn btn-ghost" disabled={seeding} onClick={() => verEjemplo('revisar')}>
           Ver ejemplo con alertas
         </button>
       </div>
+
+      {error && <div className="paseo-flag paseo-flag-bad">{error}</div>}
 
       <section className="section" style={{ paddingTop: 8 }}>
         <div className="section-head">
           <div>
             <h2>Tus paseos</h2>
-            <p>{hydrated && bookings.length > 0 ? `${bookings.length} registrados en este navegador` : ''}</p>
+            <p>{!loading && bookings.length > 0 ? `${bookings.length} en tu cuenta` : ''}</p>
           </div>
         </div>
 
-        {!hydrated ? null : bookings.length === 0 ? (
+        {loading ? null : bookings.length === 0 ? (
           <div className="empty-state">
             <h2>Aún no has creado ningún paseo</h2>
             <p>Crea uno para agendarlo, o revisa un ejemplo para ver cómo luce el reporte de verificación.</p>

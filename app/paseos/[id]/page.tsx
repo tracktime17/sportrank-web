@@ -1,27 +1,65 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
-import { usePaseoStore } from '@/lib/paseos/store'
+import { useParams } from 'next/navigation'
+import { cancelBooking, getBooking } from '@/lib/paseos/api'
 import { PaseoMapLoader } from '@/components/paseos/PaseoMapLoader'
 import { VerificationBadge } from '@/components/paseos/VerificationBadge'
 import { fmtDistance, fmtMinutes } from '@/lib/paseos/geo'
+import type { Booking } from '@/lib/paseos/types'
 
 export default function PaseoDetailPage() {
   const params = useParams<{ id: string }>()
-  const router = useRouter()
-  const { hydrated, getBooking, cancelBooking } = usePaseoStore()
+  const [booking, setBooking] = useState<Booking | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  if (!hydrated) return null
+  useEffect(() => {
+    let cancelled = false
+    function load() {
+      getBooking(params.id)
+        .then((b) => {
+          if (!cancelled) setBooking(b)
+        })
+        .catch((err) => !cancelled && setError(err.message))
+        .finally(() => !cancelled && setLoading(false))
+    }
+    load()
+    // Mientras no hay un veredicto final, sigue consultando: para que el
+    // dueño vea cuando el paseador toma el paseo, y la ruta casi en vivo
+    // mientras está en curso.
+    const interval = setInterval(() => {
+      if (booking?.status === 'pendiente' || booking?.status === 'en_curso') load()
+    }, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [params.id, booking?.status])
 
-  const booking = getBooking(params.id)
+  async function handleCancel() {
+    if (!booking) return
+    await cancelBooking(booking.id)
+    setBooking({ ...booking, status: 'cancelado' })
+  }
 
-  if (!booking) {
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  if (loading) return null
+
+  if (error || !booking) {
     return (
       <div className="wrap view-enter" style={{ paddingTop: 44 }}>
         <div className="empty-state">
           <h2>No encontramos este paseo</h2>
-          <p>Puede que haya sido creado en otro navegador — los datos de este prototipo viven solo en tu dispositivo.</p>
+          <p>{error ?? 'Puede que el link esté mal copiado, o que el paseo ya no exista.'}</p>
           <div style={{ marginTop: 22 }}>
             <Link href="/paseos" className="btn btn-primary">
               Volver a Huella
@@ -51,12 +89,15 @@ export default function PaseoDetailPage() {
       {booking.status === 'pendiente' && (
         <div className="paseo-panel">
           <h3>Paseo agendado</h3>
-          <p>Cuando el paseador llegue, debe iniciar el registro desde este mismo enlace.</p>
+          <p>Comparte este link con tu paseador — cuando llegue, debe abrirlo e iniciar el registro desde ahí.</p>
           <div className="paseo-cta-row" style={{ marginTop: 16 }}>
-            <Link href={`/paseos/${booking.id}/caminar`} className="btn btn-primary">
+            <button type="button" className="btn btn-primary" onClick={copyLink}>
+              {copied ? 'Link copiado ✓' : 'Copiar link para el paseador'}
+            </button>
+            <Link href={`/paseos/${booking.id}/caminar`} className="btn btn-ghost">
               Soy el paseador — iniciar paseo
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={() => cancelBooking(booking.id)}>
+            <button type="button" className="btn btn-ghost" onClick={handleCancel}>
               Cancelar paseo
             </button>
           </div>
@@ -66,12 +107,12 @@ export default function PaseoDetailPage() {
       {booking.status === 'en_curso' && (
         <div className="paseo-panel">
           <h3>Paseo en curso</h3>
-          <p>El paseador comenzó el registro y aún no lo termina.</p>
-          <div className="paseo-cta-row" style={{ marginTop: 16 }}>
-            <Link href={`/paseos/${booking.id}/caminar`} className="btn btn-primary">
-              Continuar registro
-            </Link>
-          </div>
+          <p>El paseador ya inició el registro. Esta página se actualiza sola mientras el paseo sigue en curso.</p>
+          {booking.session.route.length > 0 && (
+            <div className="paseo-map-wrap">
+              <PaseoMapLoader route={booking.session.route} live />
+            </div>
+          )}
         </div>
       )}
 
@@ -85,9 +126,9 @@ export default function PaseoDetailPage() {
         <>
           <div className="paseo-verdict">
             <VerificationBadge status={v.status} />
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => router.push('/paseos')}>
+            <Link href="/paseos" className="btn btn-ghost btn-sm">
               Volver
-            </button>
+            </Link>
           </div>
 
           {booking.session.route.length > 0 && (

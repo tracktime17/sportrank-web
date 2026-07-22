@@ -3,19 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { usePaseoStore } from '@/lib/paseos/store'
+import { claimBooking, addRoutePoint, endWalk, getBooking } from '@/lib/paseos/api'
 import { PaseoMapLoader } from '@/components/paseos/PaseoMapLoader'
 import { fmtDistance, fmtMinutes, totalDistanceMeters } from '@/lib/paseos/geo'
-import type { RoutePoint } from '@/lib/paseos/types'
-
-function readPhotoAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
+import type { Booking, RoutePoint } from '@/lib/paseos/types'
 
 // Ignora puntos claramente ruidosos: precisión muy mala, o saltos tan chicos
 // que son solo jitter del GPS estando quieto.
@@ -25,21 +16,33 @@ const MIN_MOVE_M = 4
 export default function CaminarPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  const { hydrated, getBooking, startWalk, addRoutePoint, endWalk } = usePaseoStore()
 
+  const [booking, setBooking] = useState<Booking | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [route, setRoute] = useState<RoutePoint[]>([])
   const [elapsedS, setElapsedS] = useState(0)
   const [geoError, setGeoError] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
   const watchIdRef = useRef<number | null>(null)
   const lastPointRef = useRef<RoutePoint | null>(null)
+  const startedAtRef = useRef<number | null>(null)
 
-  const booking = hydrated ? getBooking(params.id) : null
-  // El estado "en curso"/"por iniciar" vive en el booking mismo (localStorage
-  // vía usePaseoStore) — no se duplica en un useState local, así que un
-  // refresco de página en medio del paseo no pierde el estado.
   const phase = booking?.status === 'en_curso' ? 'during' : 'before'
-  const route = booking?.session.route ?? []
-  const startedAt = booking?.session.startedAt ?? null
   const geoSupported = typeof navigator !== 'undefined' && 'geolocation' in navigator
+
+  useEffect(() => {
+    getBooking(params.id)
+      .then((b) => {
+        setBooking(b)
+        if (b) {
+          setRoute(b.session.route)
+          startedAtRef.current = b.session.startedAt
+        }
+      })
+      .catch((err) => setLoadError(err.message))
+      .finally(() => setLoading(false))
+  }, [params.id])
 
   function beginTracking() {
     if (watchIdRef.current !== null || !navigator.geolocation) return
@@ -58,7 +61,13 @@ export default function CaminarPage() {
         if (last && totalDistanceMeters([last, point]) < MIN_MOVE_M) return
 
         lastPointRef.current = point
-        addRoutePoint(params.id, point)
+        setRoute((prev) => {
+          const next = [...prev, point]
+          addRoutePoint(params.id, next).catch(() => {
+            /* se reintentará con el próximo punto; no bloquea el registro local */
+          })
+          return next
+        })
       },
       (err) => setGeoError(err.message || 'No se pudo obtener tu ubicación.'),
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
@@ -72,10 +81,11 @@ export default function CaminarPage() {
   }, [phase, geoSupported])
 
   useEffect(() => {
-    if (phase !== 'during' || !startedAt) return
+    if (phase !== 'during' || !startedAtRef.current) return
+    const startedAt = startedAtRef.current
     const interval = setInterval(() => setElapsedS(Math.floor((Date.now() - startedAt) / 1000)), 1000)
     return () => clearInterval(interval)
-  }, [phase, startedAt])
+  }, [phase])
 
   useEffect(() => {
     return () => {
@@ -83,15 +93,23 @@ export default function CaminarPage() {
     }
   }, [])
 
-  // Si ya está completado (ej. se visita este link después de terminar el
-  // paseo), no hay nada que registrar — vuelve al reporte.
   useEffect(() => {
     if (booking?.status === 'completado') router.replace(`/paseos/${params.id}`)
   }, [booking?.status, params.id, router])
 
   async function handleStartPhoto(file: File) {
-    const dataUrl = await readPhotoAsDataUrl(file)
-    startWalk(params.id, dataUrl)
+    if (!booking) return
+    setClaiming(true)
+    setLoadError(null)
+    try {
+      const claimed = await claimBooking(params.id, file)
+      startedAtRef.current = claimed.session.startedAt
+      setBooking(claimed)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'No se pudo iniciar el paseo.')
+    } finally {
+      setClaiming(false)
+    }
   }
 
   async function handleEndPhoto(file: File) {
@@ -99,12 +117,25 @@ export default function CaminarPage() {
       navigator.geolocation.clearWatch(watchIdRef.current)
       watchIdRef.current = null
     }
-    const dataUrl = await readPhotoAsDataUrl(file)
-    endWalk(params.id, dataUrl)
+    await endWalk(params.id, file)
     router.push(`/paseos/${params.id}`)
   }
 
-  if (!hydrated) return null
+  if (loading) return null
+
+  if (loadError && !booking) {
+    return (
+      <div className="wrap view-enter" style={{ paddingTop: 44 }}>
+        <div className="empty-state">
+          <h2>No pudimos abrir este paseo</h2>
+          <p>{loadError}</p>
+          <Link href="/paseos" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
+            Volver a Huella
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (!booking) {
     return (
@@ -135,17 +166,19 @@ export default function CaminarPage() {
 
       {!geoSupported && <div className="paseo-flag paseo-flag-bad">Este navegador no soporta geolocalización.</div>}
       {geoError && <div className="paseo-flag paseo-flag-bad">{geoError}</div>}
+      {loadError && <div className="paseo-flag paseo-flag-bad">{loadError}</div>}
 
       {phase === 'before' && (
         <div className="paseo-panel">
           <h3>Paso 1 — Foto de inicio</h3>
           <p>Toma una foto del perro justo antes de comenzar. Al confirmar, empezamos a registrar la ruta GPS.</p>
           <label className="btn btn-primary" style={{ marginTop: 16, cursor: 'pointer', justifyContent: 'center' }}>
-            Tomar foto y comenzar
+            {claiming ? 'Iniciando…' : 'Tomar foto y comenzar'}
             <input
               type="file"
               accept="image/*"
               capture="environment"
+              disabled={claiming}
               style={{ display: 'none' }}
               onChange={(e) => e.target.files?.[0] && handleStartPhoto(e.target.files[0])}
             />
