@@ -19,6 +19,10 @@ export function TopNav() {
   const { count: favCount, hydrated: favHydrated } = useFavorites()
   const { count: compareCount, hydrated: compareHydrated } = useCompare()
 
+  // Huella (/paseos) es una sección aparte con su propia navegación —
+  // no tiene sentido mostrar la barra de NextRace ahí también.
+  if (pathname?.startsWith('/paseos')) return null
+
   return (
     <nav className="topnav">
       <div className="wrap">
