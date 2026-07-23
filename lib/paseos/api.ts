@@ -54,6 +54,7 @@ function rowToBooking(row: WalkBookingRow, viewerId: string): Booking {
     isDemo: row.is_demo,
     session,
     viewerRole: viewerRoleFor(row, viewerId),
+    isClaimedByMe: row.walker_id === viewerId,
   }
 }
 

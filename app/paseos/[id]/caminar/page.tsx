@@ -32,7 +32,7 @@ export default function CaminarPage() {
     booking?.status === 'cancelado'
       ? 'cancelled'
       : booking?.status === 'en_curso'
-        ? booking.viewerRole === 'walker'
+        ? booking.isClaimedByMe
           ? 'during'
           : 'taken'
         : 'before'

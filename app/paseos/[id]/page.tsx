@@ -89,17 +89,25 @@ export default function PaseoDetailPage() {
       {booking.status === 'pendiente' && (
         <div className="paseo-panel">
           <h3>Paseo agendado</h3>
-          <p>Comparte este link con tu paseador — cuando llegue, debe abrirlo e iniciar el registro desde ahí.</p>
+          <p>
+            {booking.viewerRole === 'owner'
+              ? 'Comparte este link con tu paseador — cuando llegue, debe abrirlo e iniciar el registro desde ahí.'
+              : 'Este paseo todavía no comienza.'}
+          </p>
           <div className="paseo-cta-row" style={{ marginTop: 16 }}>
-            <button type="button" className="btn btn-primary" onClick={copyLink}>
-              {copied ? 'Link copiado ✓' : 'Copiar link para el paseador'}
-            </button>
+            {booking.viewerRole === 'owner' && (
+              <button type="button" className="btn btn-primary" onClick={copyLink}>
+                {copied ? 'Link copiado ✓' : 'Copiar link para el paseador'}
+              </button>
+            )}
             <Link href={`/paseos/${booking.id}/caminar`} className="btn btn-ghost">
               Soy el paseador — iniciar paseo
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={handleCancel}>
-              Cancelar paseo
-            </button>
+            {booking.viewerRole === 'owner' && (
+              <button type="button" className="btn btn-ghost" onClick={handleCancel}>
+                Cancelar paseo
+              </button>
+            )}
           </div>
         </div>
       )}

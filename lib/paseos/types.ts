@@ -51,4 +51,11 @@ export interface Booking {
   session: WalkSession
   isDemo?: boolean
   viewerRole: ViewerRole
+  /**
+   * true si quien consulta es exactamente walker_id — independiente de
+   * viewerRole, que prioriza "owner" cuando el dueño también se auto-asignó
+   * el paseo (se camina su propio perro). La pantalla de registro en vivo
+   * necesita esta señal específica, no la prioridad owner-primero.
+   */
+  isClaimedByMe: boolean
 }
